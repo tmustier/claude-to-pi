@@ -67,7 +67,17 @@ If Chrome is installed and they're signed into Google, it should just work. Othe
 
 Explain: "Pi can search the web, fetch pages, understand YouTube videos, and analyze screen recordings. If you're signed into Google in Chrome, it works automatically."
 
-## Step 8: surf-cli setup
+## Step 8: Impeccable (design skills)
+
+Impeccable adds 20+ design skills (animate, polish, critique, typeset, adapt, etc.). It's not a Pi package — it installs separately.
+
+```bash
+ls ~/.agents/skills/adapt &>/dev/null && echo "✓ Impeccable already installed" || echo "✗ Not installed"
+```
+
+If not installed, tell the user to visit [impeccable.style](https://impeccable.style), download the ZIP for Pi, and extract it. Or skip for now — design skills are nice-to-have.
+
+## Step 9: surf-cli setup
 
 surf-cli gives Pi direct control over your actual Chrome browser — the one you're already logged into, with all your sessions and cookies. Much better than Playwright (which spins up a separate empty browser). Walk them through it:
 
@@ -84,7 +94,7 @@ If it shows their open tabs, it's working.
 
 Explain: "This lets Pi see and control your Chrome tabs directly — it can read pages you're looking at, fill forms, click buttons, all in your actual browser where you're already logged into everything."
 
-## Step 9: Auto-update cron job
+## Step 10: Auto-update cron job
 
 Set up a daily job at 4:04 AM to keep Pi packages updated:
 
@@ -94,7 +104,7 @@ Set up a daily job at 4:04 AM to keep Pi packages updated:
 
 Explain: "I've set up a daily job that keeps your Pi packages updated automatically. You don't need to think about it."
 
-## Step 10: Migrate from Claude Code
+## Step 11: Migrate from Claude Code
 
 Check if Claude Code is installed: `command -v claude &>/dev/null`
 
@@ -113,7 +123,7 @@ grep -q 'alias claude="pi"' ~/.zshrc 2>/dev/null || (echo '' >> ~/.zshrc && echo
 
 Note: Pi already reads `CLAUDE.md` files and the `claude-rules` extension picks up `.claude/rules/` folders. Project-level Claude Code configuration carries over automatically.
 
-## Step 11: Quick orientation
+## Step 12: Quick orientation
 
 Give them a brief tour:
 

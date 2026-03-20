@@ -29,7 +29,7 @@
         "skills/xlsx/SKILL.md",
         "skills/pdf/SKILL.md",
         "skills/pptx/SKILL.md",
-        "skills/frontend-design/SKILL.md",
+
         "skills/claude-api/SKILL.md",
         "skills/mcp-builder/SKILL.md",
         "skills/webapp-testing/SKILL.md",
@@ -56,7 +56,6 @@
     "git:github.com/nicobailon/pi-interview-tool",
     "git:github.com/nicobailon/pi-side-chat",
     "git:github.com/nicobailon/pi-web-access",
-    "git:github.com/nicobailon/surf-cli",
-    "git:github.com/pbakaus/impeccable"
+    "git:github.com/nicobailon/surf-cli"
   ]
 }

@@ -57,7 +57,7 @@ Pi is not a fixed app with buttons. It's more like a colleague who can learn new
 
 ### Packages (auto-installed)
 
-Pi extensions, agent-browser, firecrawl (web scraping), pi-web-access, surf-cli (Chrome control), impeccable (20+ design skills), pi-design-deck, visual-explainer, pi-interview-tool, pi-side-chat, pi-autoresearch, pi-symphony, pi-agent-teams, and more.
+Pi extensions, agent-browser, firecrawl (web scraping), pi-web-access, surf-cli (Chrome control), pi-design-deck, visual-explainer, pi-interview-tool, pi-side-chat, pi-autoresearch, pi-symphony, pi-agent-teams, and more. Plus [impeccable](https://impeccable.style) (20+ design skills, installed separately).
 
 ## Customising for your team
 
