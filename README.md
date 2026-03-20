@@ -47,7 +47,7 @@ Pi is not a fixed app with buttons. It's more like a colleague who can learn new
 
 | Category | Contents |
 |----------|---------|
-| **Settings** | 3 models (Opus 4.6, Sonnet 4.6, GPT-5.4), xhigh thinking, 20 curated packages |
+| **Settings** | 3 models (Opus 4.6, Sonnet 4.6, GPT-5.4), xhigh thinking, curated packages |
 | **AGENTS.md** | Non-technical user guidance, outbound email safety, proactive git handling |
 | **Extensions** | Startup tips (32), `/open` command, `.claude/rules/` compatibility |
 | **Prompts** | `/onboard`, `/auto-pr`, `/machine-doctor`, `/bootstrap-from-claude-code` |
@@ -57,7 +57,7 @@ Pi is not a fixed app with buttons. It's more like a colleague who can learn new
 
 ### Packages (auto-installed)
 
-Pi extensions, agent-browser, firecrawl (web scraping), pi-web-access, surf-cli (Chrome control), pi-design-deck, visual-explainer, pi-interview-tool, pi-side-chat, pi-autoresearch, pi-symphony, pi-agent-teams, and more. Plus [impeccable](https://impeccable.style) (20+ design skills, installed separately).
+Pi extensions, agent-browser, firecrawl (web scraping), pi-web-access, surf-cli (Chrome control), pi-design-deck, visual-explainer, pi-interview-tool, pi-side-chat, pi-autoresearch, pi-symphony, pi-agent-teams, upstream GTM skills from `refoundai/lenny-skills`, and more. Plus [impeccable](https://impeccable.style) (20+ design skills, installed separately).
 
 ## Customising for your team
 

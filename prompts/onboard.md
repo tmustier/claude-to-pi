@@ -49,11 +49,20 @@ Check if `~/.pi/agent/AGENTS.md` exists. If not, copy from `~/claude-to-pi/AGENT
 
 ## Step 5: Install skills, prompts, extensions
 
-If not already done, install from `~/claude-to-pi/`. Check if skills are already present before re-installing.
+If not already done, install the repo-owned skills, prompts, and extensions from `~/claude-to-pi/`. Check if skills are already present before re-installing.
+
+Then clean up any stale local symlinks for skills that now come from an upstream package:
+
+```bash
+for s in enterprise-sales founder-sales positioning-messaging; do
+  p="$HOME/.pi/agent/skills/$s"
+  [ -L "$p" ] && [ ! -e "$p" ] && rm "$p"
+done
+```
 
 ## Step 6: Pull packages
 
-Run `pi update` if packages haven't been pulled yet.
+Run `pi update` if packages haven't been pulled yet. This also installs the upstream GTM skills `enterprise-sales`, `founder-sales`, and `positioning-messaging` from `refoundai/lenny-skills`.
 
 ## Step 7: pi-web-access setup
 

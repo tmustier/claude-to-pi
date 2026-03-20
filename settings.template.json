@@ -19,6 +19,14 @@
     "git:github.com/davebcn87/pi-autoresearch",
     "git:github.com/tmustier/pi-symphony",
     {
+      "source": "git:github.com/refoundai/lenny-skills",
+      "skills": [
+        "skills/enterprise-sales/SKILL.md",
+        "skills/founder-sales/SKILL.md",
+        "skills/positioning-messaging/SKILL.md"
+      ]
+    },
+    {
       "source": "git:github.com/firecrawl/firecrawl-claude-plugin",
       "skills": ["-skills/firecrawl-cli/SKILL.md"]
     },

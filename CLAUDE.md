@@ -113,8 +113,14 @@ Edit `~/.pi/agent/AGENTS.md` and replace the placeholders in the "About You" sec
 ## Step 6: Install skills, agents, prompts, extensions, tools
 
 ```bash
-# Custom skills
+# Repo-owned custom skills
 for s in ~/claude-to-pi/skills/*/; do pi install "$s" 2>/dev/null; done
+
+# Clean up any old local copies of skills that now come from an upstream package
+for s in enterprise-sales founder-sales positioning-messaging; do
+  p="$HOME/.pi/agent/skills/$s"
+  [ -L "$p" ] && [ ! -e "$p" ] && rm "$p"
+done
 
 # Subagents
 mkdir -p ~/.pi/agent/agents
@@ -152,7 +158,7 @@ command -v yt-dlp &>/dev/null || brew install yt-dlp
 
 ## Step 8: Pull Pi packages
 
-This downloads all the packages configured in settings.json:
+This downloads all the packages configured in settings.json, including upstream GTM skills (`enterprise-sales`, `founder-sales`, `positioning-messaging`) from `refoundai/lenny-skills`:
 ```bash
 pi update
 ```
