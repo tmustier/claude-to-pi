@@ -65,14 +65,16 @@ This is a hard rule — no exceptions, no "the user seemed to want me to send it
 
 ## Interactive and long-running commands
 
-**Never run interactive commands (git rebase, python REPL, vim, etc.) or long-lived processes directly in bash.** They will hang waiting for input or never exit.
+**Never run interactive commands or long-lived processes directly in bash.** They will hang waiting for input or never exit.
 
-Rules:
-- **Use the `tmux` skill** for anything interactive — Python REPLs, debuggers, database consoles, interactive git operations (rebase, merge with conflicts). The skill creates isolated tmux sessions, sends keystrokes, and reads output without blocking.
+The `non-interactive-bash` extension handles the most common hangs automatically — it prevents editors, pagers, and git credential prompts from blocking by injecting env vars (`GIT_EDITOR`, `PAGER`, `GIT_TERMINAL_PROMPT`, `HOMEBREW_NO_AUTO_UPDATE`, etc.) into every bash call. You don't need to set these yourself.
+
+What you still need to handle manually:
+- **Use the `tmux` skill** for anything truly interactive — Python REPLs, debuggers, database consoles, interactive git operations (rebase, merge with conflicts). The skill creates isolated tmux sessions, sends keystrokes, and reads output without blocking.
 - **Launch GUI apps with `open -a "App Name"`** — macOS Launch Services detaches the process. Never run the app binary directly.
-- **Always set `timeout` on bash commands** that could block — especially curl, network calls, or anything interactive. Use `timeout 10 curl ...` not bare `curl ...`.
+- **Always set `timeout` on bash commands** that could block — especially curl, network calls, or anything that hits the network. Use `timeout 10 curl ...` not bare `curl ...`.
 - **Server processes:** If you must start a server, use `nohup ... > /dev/null 2>&1 &` and immediately `disown`. Then verify with a health check rather than waiting on the process.
 - **Browser cookie extraction:** Use the `chrome-cookies` skill to extract session cookies from Chrome — reads the encrypted cookie DB directly via macOS Keychain, no debug port needed.
-- **Clean up after yourself** — kill tmux sessions and background processes when done. The user won't know to do this. Run `tmux -S "$SOCKET" kill-session -t "$SESSION"` when finished with interactive work. Periodically check for stale sessions with `tmux -S "$SOCKET" list-sessions` and clean them up.
+- **Clean up after yourself** — kill tmux sessions and background processes when done. The user won't know to do this.
 
 <!-- Add your team-specific sections below: MCP servers, project repos, tool access, etc. -->
