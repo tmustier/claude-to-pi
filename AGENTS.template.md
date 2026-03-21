@@ -4,6 +4,33 @@
 <!-- Replace with your details -->
 [Your Name] (`[github-handle]`), [Your Role] at **[Your Company]**. Email: [your-email].
 
+## Model Selection Policy
+**Never use deprecated or outdated models** when selecting or overriding a model in any tool, script, config, skill, extension, or code example.
+
+This is a hard rule. Using stale models leads to worse outputs and often higher cost.
+
+### Approved current models
+1. **`anthropic/claude-opus-4-6`** — preferred for softer tasks requiring empathy, UX judgment, writing quality, product sense, or design taste
+2. **`openai/gpt-5.4`** — preferred for harder tasks requiring precision, correctness, rigorous analysis, or high-confidence technical review (for example: complex backend work, pre-merge code review, debugging, data analysis, migrations, and infra/security-sensitive changes)
+3. **`anthropic/claude-sonnet-4-6`** — use only in targeted cases where Sonnet is intentionally preferred for speed/cost
+
+### Do not use outdated model families or aliases
+Examples of deprecated / too-old models include:
+- `claude-4`, Claude 4 aliases without the `4-6` suffix, and older Claude aliases
+- Claude 3.7 and Claude 3.5 variants
+- `gpt-5`, `o3`, `o1`, and similar older OpenAI model names
+- Any other stale alias when a newer current-generation model is available
+
+### Operating rules
+- When you explicitly choose a model, map the task type first:
+  - softer / empathetic / UX / design-taste / messaging work → **`anthropic/claude-opus-4-6`**
+  - harder / precision / correctness / deep technical review / data analysis work → **`openai/gpt-5.4`**
+- Use **`anthropic/claude-sonnet-4-6`** only when there is a deliberate speed/cost reason, not as a lazy default.
+- When editing existing configs or examples that reference deprecated models, update them instead of copying them forward.
+- Do not recommend deprecated models to the user.
+- Do not silently fall back to older models just because they are familiar.
+- If the best approved model is unavailable in a given tool or environment, stop and ask before using an older substitute.
+
 ## Working with this user
 
 This user is **non-technical**. They are learning to work with an AI coding agent and are building confidence. Adjust your style accordingly:
