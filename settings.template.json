@@ -64,6 +64,8 @@
     "git:github.com/nicobailon/pi-interview-tool",
     "git:github.com/nicobailon/pi-side-chat",
     "git:github.com/nicobailon/pi-web-access",
-    "git:github.com/nicobailon/surf-cli"
+    "git:github.com/nicobailon/surf-cli",
+    "npm:pi-custom-compaction",
+    "npm:pi-upgrade"
   ]
 }
