@@ -15,14 +15,14 @@ command -v node && echo "✓ node $(node --version)" || echo "✗ node missing"
 command -v npm && echo "✓ npm" || echo "✗ npm missing"
 command -v git && echo "✓ git" || echo "✗ git missing"
 command -v gh && echo "✓ gh" || echo "✗ gh missing"
-command -v pi && echo "✓ pi" || echo "✗ pi missing"
+command -v pi && echo "✓ pi $(pi --version 2>/dev/null || echo '(unknown version)')" || echo "✗ pi missing"
 ```
 
 For anything missing:
 - **node/npm**: "You need Node.js. Go to https://nodejs.org and download the LTS version. Run the installer, then come back."
 - **git**: `brew install git` (if they don't have brew: "Go to https://brew.sh, copy the install command, paste it in your terminal, and run it. It'll ask for your password — remember, nothing shows as you type.")
 - **gh**: `brew install gh`
-- **pi**: `npm i -g @mariozechner/pi-coding-agent`
+- **pi**: Will be installed/updated in Step 4.
 
 Wait for them to install each missing tool before continuing.
 
@@ -46,9 +46,9 @@ If the claude-to-pi repo isn't already cloned:
 gh repo clone tmustier/claude-to-pi ~/claude-to-pi
 ```
 
-## Step 4: Install Pi and copy your credentials
+## Step 4: Install or update Pi, then copy your credentials
 
-Install Pi if not already:
+Always install/update Pi to the latest version, even if it's already present:
 ```bash
 npm i -g @mariozechner/pi-coding-agent
 ```
