@@ -13,11 +13,22 @@
     "npm:pi-mcp-adapter",
     "npm:pi-brave-search",
     "npm:@tmustier/pi-session-hud",
-    "git:github.com/tmustier/pi-extensions",
+    {
+      "source": "git:github.com/tmustier/pi-extensions",
+      "extensions": ["ralph-wiggum/index.ts"],
+      "skills": [
+        "extending-pi/SKILL.md",
+        "extending-pi/skill-creator/SKILL.md",
+        "ralph-wiggum/SKILL.md"
+      ],
+      "prompts": [],
+      "themes": []
+    },
     "git:github.com/tmustier/pi-agent-teams",
     "git:github.com/vercel-labs/agent-browser",
     "git:github.com/davebcn87/pi-autoresearch",
     "git:github.com/tmustier/pi-symphony",
+    "git:github.com/tmustier/superhuman-mail",
     {
       "source": "git:github.com/refoundai/lenny-skills",
       "skills": [

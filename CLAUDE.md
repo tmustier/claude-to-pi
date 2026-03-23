@@ -142,18 +142,18 @@ chmod +x ~/.local/bin/send-gate
 
 Make sure `~/.local/bin` is on PATH:
 ```bash
-echo $PATH | grep -q '.local/bin' || (echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc)
+grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' ~/.zshrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 ```
 
 ## Step 7: Install external tools
 
 ```bash
 # Firecrawl (web scraping)
-command -v firecrawl &>/dev/null || npm i -g firecrawl-cli
+command -v firecrawl >/dev/null 2>&1 || npm i -g firecrawl-cli
 
 # Video tools (optional, for pi-web-access)
-command -v ffmpeg &>/dev/null || brew install ffmpeg
-command -v yt-dlp &>/dev/null || brew install yt-dlp
+command -v ffmpeg >/dev/null 2>&1 || brew install ffmpeg
+command -v yt-dlp >/dev/null 2>&1 || brew install yt-dlp
 ```
 
 ## Step 8: Pull Pi packages

@@ -69,7 +69,7 @@ Run `pi update` if packages haven't been pulled yet. This also installs the upst
 pi-web-access can work zero-config if the user is signed into Google in Chrome. Check if Chrome is installed:
 
 ```bash
-ls "/Applications/Google Chrome.app" &>/dev/null && echo "Chrome found" || echo "Chrome not found"
+ls "/Applications/Google Chrome.app" >/dev/null 2>&1 && echo "Chrome found" || echo "Chrome not found"
 ```
 
 If Chrome is installed and they're signed into Google, it should just work. Otherwise, they can add API keys later to `~/.pi/web-search.json`.
@@ -81,7 +81,7 @@ Explain: "Pi can search the web, fetch pages, understand YouTube videos, and ana
 Impeccable adds 20+ design skills (animate, polish, critique, typeset, adapt, etc.). It's not a Pi package — it installs separately.
 
 ```bash
-ls ~/.agents/skills/adapt &>/dev/null && echo "✓ Impeccable already installed" || echo "✗ Not installed"
+ls ~/.agents/skills/adapt >/dev/null 2>&1 && echo "✓ Impeccable already installed" || echo "✗ Not installed"
 ```
 
 If not installed, tell the user to visit [impeccable.style](https://impeccable.style), download the ZIP for Pi, and extract it. Or skip for now — design skills are nice-to-have.
@@ -115,7 +115,7 @@ Explain: "I've set up a daily job that keeps your Pi packages updated automatica
 
 ## Step 11: Migrate from Claude Code
 
-Check if Claude Code is installed: `command -v claude &>/dev/null`
+Check if Claude Code is installed: `command -v claude >/dev/null 2>&1`
 
 If found:
 
@@ -127,7 +127,10 @@ If found:
 
 Set up the alias if not already done:
 ```bash
-grep -q 'alias claude="pi"' ~/.zshrc 2>/dev/null || (echo '' >> ~/.zshrc && echo 'alias claude="pi"' >> ~/.zshrc && source ~/.zshrc)
+grep -q 'alias claude="pi"' ~/.zshrc 2>/dev/null || {
+  echo '' >> ~/.zshrc
+  echo 'alias claude="pi"' >> ~/.zshrc
+}
 ```
 
 Note: Pi already reads `CLAUDE.md` files and the `claude-rules` extension picks up `.claude/rules/` folders. Project-level Claude Code configuration carries over automatically.
