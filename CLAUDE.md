@@ -113,11 +113,11 @@ Edit `~/.pi/agent/AGENTS.md` and replace the placeholders in the "About You" sec
 ## Step 6: Install skills, agents, prompts, extensions, tools
 
 ```bash
-# Repo-owned custom skills
-for s in ~/claude-to-pi/skills/*/; do pi install "$s" 2>/dev/null; done
+# Skills are loaded automatically via packages in settings.json (pi update pulls them).
+# No need to install them manually — they come from git:github.com/tmustier/claude-to-pi.
 
 # Clean up any old local copies of skills that now come from an upstream package
-for s in enterprise-sales founder-sales positioning-messaging; do
+for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
   p="$HOME/.pi/agent/skills/$s"
   [ -L "$p" ] && [ ! -e "$p" ] && rm "$p"
 done
