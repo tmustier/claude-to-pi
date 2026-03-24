@@ -38,10 +38,6 @@
       ]
     },
     {
-      "source": "git:github.com/firecrawl/firecrawl-claude-plugin",
-      "skills": ["-skills/firecrawl-cli/SKILL.md"]
-    },
-    {
       "source": "git:github.com/anthropics/skills",
       "skills": [
         "skills/docx/SKILL.md",
@@ -71,9 +67,7 @@
       "themes": []
     },
     "git:github.com/nicobailon/pi-design-deck",
-    "git:github.com/nicobailon/visual-explainer",
     "git:github.com/nicobailon/pi-interview-tool",
-    "git:github.com/nicobailon/pi-side-chat",
     "git:github.com/nicobailon/pi-web-access",
     "git:github.com/nicobailon/surf-cli",
     "npm:pi-custom-compaction",
