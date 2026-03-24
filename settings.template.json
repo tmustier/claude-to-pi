@@ -41,15 +41,8 @@
       "source": "git:github.com/anthropics/skills",
       "skills": [
         "skills/docx/SKILL.md",
-        "skills/xlsx/SKILL.md",
         "skills/pdf/SKILL.md",
-        "skills/pptx/SKILL.md",
-
-        "skills/claude-api/SKILL.md",
-        "skills/mcp-builder/SKILL.md",
-        "skills/webapp-testing/SKILL.md",
-        "skills/doc-coauthoring/SKILL.md",
-        "skills/internal-comms/SKILL.md"
+        "skills/xlsx/SKILL.md"
       ]
     },
     {
