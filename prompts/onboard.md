@@ -125,15 +125,25 @@ If found:
 4. Skills that already exist in Pi → tell the user and skip
 5. Complex items → create a todo in `~/todo/` with the original content and a migration plan
 
-Set up the alias if not already done:
+### Alias claude → pi (optional)
+
+**Ask the user** if they'd like to redirect the `claude` command to open Pi instead. Be upfront about what this does — it's not just a shortcut, it replaces the behaviour of an existing command.
+
+Something like: "One last thing — would you like me to make it so typing `claude` opens Pi instead of Claude Code? This means if you type `claude` in your terminal, you'll get Pi — not Claude Code. Claude Code stays installed and you can still run it directly at its full path, but the `claude` command would point here. Some people find it handy since the muscle memory is hard to shake, but it's completely optional — you can always just type `pi`."
+
+If they say yes:
+
 ```bash
 grep -q 'alias claude="pi"' ~/.zshrc 2>/dev/null || {
   echo '' >> ~/.zshrc
+  echo '# Use Pi instead of Claude Code' >> ~/.zshrc
   echo 'alias claude="pi"' >> ~/.zshrc
 }
 ```
 
-Note: Pi already reads `CLAUDE.md` files and the `claude-rules` extension picks up `.claude/rules/` folders. Project-level Claude Code configuration carries over automatically.
+If they say no, that's fine — move on. Don't push it.
+
+Either way, note: Pi already reads `CLAUDE.md` files and the `claude-rules` extension picks up `.claude/rules/` folders. Project-level Claude Code configuration carries over automatically.
 
 ## Step 12: Quick orientation
 

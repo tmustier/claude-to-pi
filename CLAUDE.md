@@ -165,13 +165,7 @@ pi update
 
 This may take a minute. Let the user know.
 
-## Step 9: Set up the alias
-
-```bash
-grep -q 'alias claude="pi"' ~/.zshrc 2>/dev/null || (echo '' >> ~/.zshrc && echo '# Use Pi instead of Claude Code' >> ~/.zshrc && echo 'alias claude="pi"' >> ~/.zshrc)
-```
-
-## Step 10: Hand off to Pi
+## Step 9: Hand off to Pi
 
 Everything mechanical is done. Tell the user:
 
@@ -179,7 +173,7 @@ Everything mechanical is done. Tell the user:
 
 **You're all set up! 🎉**
 
-From now on, type **`pi`** to start your AI assistant (or `claude` — it'll open Pi automatically).
+From now on, type **`pi`** to start your AI assistant.
 
 When Pi starts, type **`/onboard`** to finish connecting your accounts. This takes about 10 minutes and mostly involves signing into things in your browser:
 - Granting Full Disk Access (a macOS permission — Pi walks you through it)
