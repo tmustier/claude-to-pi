@@ -47,16 +47,16 @@ Explain the models: "Opus has more empathy and taste — it's better for writing
 
 Check if `~/.pi/agent/AGENTS.md` exists. If not, copy from `~/claude-to-pi/AGENTS.template.md` and personalize — ask for their name, GitHub username, role, company, and email.
 
-## Step 5: Install skills, prompts, extensions
+## Step 5: Skills
 
-If not already done, install the repo-owned skills, prompts, and extensions from `~/claude-to-pi/`. Check if skills are already present before re-installing.
+Skills are loaded automatically via packages in `settings.json` (the `git:github.com/tmustier/claude-to-pi` entry). **Do not run `pi install` on the skill directories** — that would create duplicate entries and cause extension load errors.
 
-Then clean up any stale local symlinks for skills that now come from an upstream package:
+Just clean up any local skill symlinks from previous installs (whether broken or still valid) to avoid duplicates:
 
 ```bash
-for s in enterprise-sales founder-sales positioning-messaging; do
+for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
   p="$HOME/.pi/agent/skills/$s"
-  [ -L "$p" ] && [ ! -e "$p" ] && rm "$p"
+  [ -L "$p" ] && rm "$p" && echo "Removed stale symlink: $s"
 done
 ```
 

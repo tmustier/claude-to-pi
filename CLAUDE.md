@@ -8,7 +8,26 @@ Work through these steps in order.
 
 ## Step 1: Prerequisites
 
-Check what's installed:
+First, check if Homebrew is installed (many tools need it):
+
+```bash
+if command -v brew >/dev/null 2>&1; then
+  echo "✓ Homebrew installed"
+else
+  echo "✗ Homebrew missing — installing..."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  # Add to PATH (Apple Silicon Macs)
+  if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    echo >> ~/.zprofile
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+  fi
+fi
+```
+
+**Note:** Homebrew may ask for the user's Mac password — remind them that nothing appears on screen when typing it (no dots, no asterisks). This is normal.
+
+Then check the rest:
 
 ```bash
 command -v node && echo "✓ node $(node --version)" || echo "✗ node missing"
@@ -20,7 +39,7 @@ command -v pi && echo "✓ pi $(pi --version 2>/dev/null || echo '(unknown versi
 
 For anything missing:
 - **node/npm**: "You need Node.js. Go to https://nodejs.org and download the LTS version. Run the installer, then come back."
-- **git**: `brew install git` (if they don't have brew: "Go to https://brew.sh, copy the install command, paste it in your terminal, and run it. It'll ask for your password — remember, nothing shows as you type.")
+- **git**: `brew install git`
 - **gh**: `brew install gh`
 - **pi**: Will be installed/updated in Step 4.
 
@@ -119,7 +138,7 @@ Edit `~/.pi/agent/AGENTS.md` and replace the placeholders in the "About You" sec
 # Clean up any old local copies of skills that now come from an upstream package
 for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
   p="$HOME/.pi/agent/skills/$s"
-  [ -L "$p" ] && [ ! -e "$p" ] && rm "$p"
+  [ -L "$p" ] && rm "$p"
 done
 
 # Subagents
@@ -150,6 +169,9 @@ grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' ~/.zshrc 2>/dev/null || echo 'ex
 ```bash
 # Firecrawl (web scraping)
 command -v firecrawl >/dev/null 2>&1 || npm i -g firecrawl-cli
+
+# uv (Python package runner, used by skill-scanner)
+command -v uv >/dev/null 2>&1 || brew install uv
 
 # Video tools (optional, for pi-web-access)
 command -v ffmpeg >/dev/null 2>&1 || brew install ffmpeg
