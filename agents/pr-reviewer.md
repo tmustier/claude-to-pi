@@ -2,7 +2,7 @@
 name: pr-reviewer
 description: Fast, focused PR reviewer. Read-only — analyzes diffs and returns structured findings. Use for auto-pr review steps.
 tools: read, bash
-model: openai-codex/gpt-5.4
+model: openai/gpt-5.4
 thinking: xhigh
 ---
 

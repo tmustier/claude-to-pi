@@ -31,7 +31,23 @@ If it fails, explain they need to quit and reopen their terminal app after grant
 
 ## Step 2: Check prerequisites
 
-Check that `node`, `npm`, `git`, `gh`, `pi` are installed. For anything missing, give the exact install command and wait.
+First check Homebrew (needed to install several tools):
+```bash
+command -v brew >/dev/null 2>&1 && echo "✓ Homebrew" || echo "✗ Homebrew missing"
+```
+If missing, install it:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+if [[ -f /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+  grep -Fq '/opt/homebrew/bin/brew' ~/.zprofile 2>/dev/null || {
+    echo >> ~/.zprofile
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+  }
+fi
+```
+
+Then check that `node`, `npm`, `git`, `gh`, `pi`, `uv` are installed. For anything missing, give the exact install command (`brew install gh`, `brew install uv`, etc.) and wait.
 
 Also check `gh auth status`.
 
@@ -47,17 +63,26 @@ Explain the models: "Opus has more empathy and taste — it's better for writing
 
 Check if `~/.pi/agent/AGENTS.md` exists. If not, copy from `~/claude-to-pi/AGENTS.template.md` and personalize — ask for their name, GitHub username, role, company, and email.
 
-## Step 5: Install skills, prompts, extensions
+## Step 5: Skills, prompts, extensions
 
-If not already done, install the repo-owned skills, prompts, and extensions from `~/claude-to-pi/`. Check if skills are already present before re-installing.
+Skills are loaded automatically via packages in `settings.json` (the `git:github.com/tmustier/claude-to-pi` entry). **Do not run `pi install` on the skill directories** — that would create duplicate entries and cause extension load errors.
 
-Then clean up any stale local symlinks for skills that now come from an upstream package:
+Clean up any local skill symlinks from previous installs (whether broken or still valid) to avoid duplicates with the package-managed versions:
 
 ```bash
-for s in enterprise-sales founder-sales positioning-messaging; do
+for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
   p="$HOME/.pi/agent/skills/$s"
-  [ -L "$p" ] && [ ! -e "$p" ] && rm "$p"
+  [ -L "$p" ] && rm "$p" && echo "Removed stale symlink: $s"
 done
+```
+
+If the bootstrap hasn't already copied agents, prompts, and extensions (check if `~/.pi/agent/agents/reviewer.md` exists), install them:
+
+```bash
+mkdir -p ~/.pi/agent/agents && cp ~/claude-to-pi/agents/*.md ~/.pi/agent/agents/
+mkdir -p ~/.pi/agent/prompts && cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
+mkdir -p ~/.pi/agent/extensions && cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
+mkdir -p ~/.local/bin && cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate && chmod +x ~/.local/bin/send-gate
 ```
 
 ## Step 6: Pull packages
