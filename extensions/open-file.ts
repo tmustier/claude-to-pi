@@ -1,5 +1,5 @@
-import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import type { AutocompleteItem } from "@mariozechner/pi-tui";
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type { AutocompleteItem } from "@earendil-works/pi-tui";
 import { readdirSync, statSync } from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";

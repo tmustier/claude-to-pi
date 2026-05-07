@@ -133,7 +133,7 @@ Explain: "This lets Pi see and control your Chrome tabs directly — it can read
 Set up a daily job at 4:04 AM to keep Pi packages updated:
 
 ```bash
-(crontab -l 2>/dev/null; echo "4 4 * * * npm install -g @mariozechner/pi-coding-agent >> /tmp/pi-update.log 2>&1 && $(which pi) update >> /tmp/pi-update.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "4 4 * * * npm install -g @earendil-works/pi-coding-agent >> /tmp/pi-update.log 2>&1 && $(which pi) update >> /tmp/pi-update.log 2>&1") | crontab -
 ```
 
 Explain: "I've set up a daily job that keeps your Pi packages updated automatically. You don't need to think about it."

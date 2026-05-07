@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execSync } from "child_process";
 
 export default function (pi: ExtensionAPI) {
@@ -9,7 +9,7 @@ export default function (pi: ExtensionAPI) {
 
       try {
         const output = execSync(
-          "npm install -g @mariozechner/pi-coding-agent 2>&1 && pi update 2>&1",
+          "npm install -g @earendil-works/pi-coding-agent 2>&1 && pi update 2>&1",
           { encoding: "utf-8", timeout: 120_000 }
         );
         ctx.ui.notify("Pi updated. Reloading...", "success");

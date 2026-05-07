@@ -69,7 +69,7 @@ gh repo clone tmustier/claude-to-pi ~/claude-to-pi
 
 Always install/update Pi to the latest version, even if it's already present:
 ```bash
-npm i -g @mariozechner/pi-coding-agent
+npm i -g @earendil-works/pi-coding-agent
 ```
 
 Now copy your Claude credentials into Pi so they don't have to log in again. You (Claude Code) store your Anthropic OAuth tokens in the macOS Keychain. Extract them and write to Pi's auth file:
