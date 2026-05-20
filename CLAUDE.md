@@ -133,7 +133,27 @@ Edit `~/.pi/agent/AGENTS.md` and replace the placeholders in the "About You" sec
 
 ```bash
 # Skills are loaded automatically via packages in settings.json (pi update pulls them).
-# No need to install them manually — they come from git:github.com/tmustier/claude-to-pi.
+# No need to install individual skill directories manually — Agent Skill folders are
+# not Pi packages, and installing them that way makes Pi try to load skills as
+# extensions. This repo's skills come from git:github.com/tmustier/claude-to-pi.
+python3 - <<'PY'
+import json, pathlib
+
+settings_path = pathlib.Path.home() / '.pi' / 'agent' / 'settings.json'
+settings = json.loads(settings_path.read_text())
+
+# Remove stale entries left by older setup attempts that installed individual
+# claude-to-pi skill directories as packages.
+settings['packages'] = [
+    pkg for pkg in settings.get('packages', [])
+    if not (
+        isinstance(pkg, str)
+        and 'claude-to-pi/skills/' in pkg
+    )
+]
+
+settings_path.write_text(json.dumps(settings, indent=2) + '\n')
+PY
 
 # Clean up any old local copies of skills that now come from an upstream package
 for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
