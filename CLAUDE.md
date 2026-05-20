@@ -113,8 +113,30 @@ Edit `~/.pi/agent/AGENTS.md` and replace the placeholders in the "About You" sec
 ## Step 6: Install skills, agents, prompts, extensions, tools
 
 ```bash
-# Repo-owned custom skills
-for s in ~/claude-to-pi/skills/*/; do pi install "$s" 2>/dev/null; done
+# Repo-owned custom skills are loaded from settings.template.json via:
+#   "skills": ["~/claude-to-pi/skills"]
+# Do not run `pi install` on each skill directory: individual skill folders are
+# Agent Skills, not Pi packages, and Pi will try to load them as extensions.
+python3 - <<'PY'
+import json, pathlib
+
+settings_path = pathlib.Path.home() / '.pi' / 'agent' / 'settings.json'
+settings = json.loads(settings_path.read_text())
+
+settings['packages'] = [
+    pkg for pkg in settings.get('packages', [])
+    if not (
+        isinstance(pkg, str)
+        and 'claude-to-pi/skills/' in pkg
+    )
+]
+
+skills = settings.setdefault('skills', [])
+if '~/claude-to-pi/skills' not in skills:
+    skills.append('~/claude-to-pi/skills')
+
+settings_path.write_text(json.dumps(settings, indent=2) + '\n')
+PY
 
 # Clean up any old local copies of skills that now come from an upstream package
 for s in enterprise-sales founder-sales positioning-messaging; do
