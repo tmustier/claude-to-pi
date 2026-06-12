@@ -1,20 +1,21 @@
 ---
 name: todo-audit
-description: Create, review, and maintain markdown todo files with absolute dates and checklist status. Use when the user asks to capture tasks, audit outstanding todos, update todo status, or organise reminders.
+description: Audit and reconcile Thomas's todo list against all active data sources — calendar, email, customer deal docs, deal tracker spreadsheet, and any future sources. Use when Thomas asks to "review my todos", "what's outstanding", "todo audit", "anything I'm missing", "check my follow-ups", "what's stale", or as part of a Monday morning / Friday EOD review. Also use when he asks about overdue items, missed follow-ups, or wants a pipeline hygiene check.
 ---
 
 # Todo Audit
 
-Use this skill for file-based todo capture and review.
+Audit and reconcile `~/todo/` against calendar, email, and deal pipeline.
 
-## Canonical format
+## Todo format
 
-Read `todo-format.md` before creating or editing todos. Follow it exactly.
+See [todo-format.md](./todo-format.md) for the file format used in `~/todo/`.
 
-## Rules
+## Procedure
 
-- Use absolute dates only: `YYYY-MM-DD`. Do not write "tomorrow", "next week", or similar relative dates.
-- Create one file per distinct ask.
-- Put related sub-tasks inside the file as a checklist.
-- When a todo is completed, change `Status` to `done`; do not delete the todo unless the user explicitly asks.
-- If the user gives an ambiguous due date, ask before writing the file.
+1. Read all files in `~/todo/` to get current todos
+2. Pull recent calendar events (`gog calendar list --days 14`)
+3. Filter for external calls (ignore internal Nexcade-only meetings, standups, 1:1s)
+4. Cross-reference against sent emails for follow-ups
+5. Flag any gaps: external calls with no follow-up, overdue items, stale todos
+6. Report findings with recommended actions

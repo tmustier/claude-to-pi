@@ -31,7 +31,23 @@ If it fails, explain they need to quit and reopen their terminal app after grant
 
 ## Step 2: Check prerequisites
 
-Check that `node`, `npm`, `git`, `gh`, `pi` are installed. For anything missing, give the exact install command and wait.
+First check Homebrew (needed to install several tools):
+```bash
+command -v brew >/dev/null 2>&1 && echo "✓ Homebrew" || echo "✗ Homebrew missing"
+```
+If missing, install it:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+if [[ -f /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+  grep -Fq '/opt/homebrew/bin/brew' ~/.zprofile 2>/dev/null || {
+    echo >> ~/.zprofile
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+  }
+fi
+```
+
+Then check that `node`, `npm`, `git`, `gh`, `pi`, `uv` are installed. For anything missing, give the exact install command (`brew install gh`, `brew install uv`, etc.) and wait.
 
 Also check `gh auth status`.
 
@@ -47,17 +63,26 @@ Explain the models: "Opus has more empathy and taste — it's better for writing
 
 Check if `~/.pi/agent/AGENTS.md` exists. If not, copy from `~/claude-to-pi/AGENTS.template.md` and personalize — ask for their name, GitHub username, role, company, and email.
 
-## Step 5: Install skills, prompts, extensions
+## Step 5: Skills, prompts, extensions
 
-If not already done, install the repo-owned skills, prompts, and extensions from `~/claude-to-pi/`. Check if skills are already present before re-installing.
+Skills are loaded automatically via packages in `settings.json` (the `git:github.com/tmustier/claude-to-pi` entry). **Do not run `pi install` on the skill directories** — that would create duplicate entries and cause extension load errors.
 
-Then clean up any stale local symlinks for skills that now come from an upstream package:
+Clean up any local skill symlinks from previous installs (whether broken or still valid) to avoid duplicates with the package-managed versions:
 
 ```bash
-for s in enterprise-sales founder-sales positioning-messaging; do
+for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
   p="$HOME/.pi/agent/skills/$s"
-  [ -L "$p" ] && [ ! -e "$p" ] && rm "$p"
+  [ -L "$p" ] && rm "$p" && echo "Removed stale symlink: $s"
 done
+```
+
+If the bootstrap hasn't already copied agents, prompts, and extensions (check if `~/.pi/agent/agents/reviewer.md` exists), install them:
+
+```bash
+mkdir -p ~/.pi/agent/agents && cp ~/claude-to-pi/agents/*.md ~/.pi/agent/agents/
+mkdir -p ~/.pi/agent/prompts && cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
+mkdir -p ~/.pi/agent/extensions && cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
+mkdir -p ~/.local/bin && cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate && chmod +x ~/.local/bin/send-gate
 ```
 
 ## Step 6: Pull packages
@@ -108,7 +133,7 @@ Explain: "This lets Pi see and control your Chrome tabs directly — it can read
 Set up a daily job at 4:04 AM to keep Pi packages updated:
 
 ```bash
-(crontab -l 2>/dev/null; echo "4 4 * * * npm install -g @mariozechner/pi-coding-agent >> /tmp/pi-update.log 2>&1 && $(which pi) update >> /tmp/pi-update.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "4 4 * * * npm install -g @earendil-works/pi-coding-agent >> /tmp/pi-update.log 2>&1 && $(which pi) update >> /tmp/pi-update.log 2>&1") | crontab -
 ```
 
 Explain: "I've set up a daily job that keeps your Pi packages updated automatically. You don't need to think about it."
@@ -125,15 +150,25 @@ If found:
 4. Skills that already exist in Pi → tell the user and skip
 5. Complex items → create a todo in `~/todo/` with the original content and a migration plan
 
-Set up the alias if not already done:
+### Alias claude → pi (optional)
+
+**Ask the user** if they'd like to redirect the `claude` command to open Pi instead. Be upfront about what this does — it's not just a shortcut, it replaces the behaviour of an existing command.
+
+Something like: "One last thing — would you like me to make it so typing `claude` opens Pi instead of Claude Code? This means if you type `claude` in your terminal, you'll get Pi — not Claude Code. Claude Code stays installed and you can still run it directly at its full path, but the `claude` command would point here. Some people find it handy since the muscle memory is hard to shake, but it's completely optional — you can always just type `pi`."
+
+If they say yes:
+
 ```bash
 grep -q 'alias claude="pi"' ~/.zshrc 2>/dev/null || {
   echo '' >> ~/.zshrc
+  echo '# Use Pi instead of Claude Code' >> ~/.zshrc
   echo 'alias claude="pi"' >> ~/.zshrc
 }
 ```
 
-Note: Pi already reads `CLAUDE.md` files and the `claude-rules` extension picks up `.claude/rules/` folders. Project-level Claude Code configuration carries over automatically.
+If they say no, that's fine — move on. Don't push it.
+
+Either way, note: Pi already reads `CLAUDE.md` files and the `claude-rules` extension picks up `.claude/rules/` folders. Project-level Claude Code configuration carries over automatically.
 
 ## Step 12: Quick orientation
 

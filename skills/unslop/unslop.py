@@ -751,7 +751,7 @@ async def run(args: argparse.Namespace) -> None:
     # Verify pi is installed
     if not shutil.which("pi"):
         print("Error: `pi` CLI not found.")
-        print("Install pi: npm install -g @mariozechner/pi-coding-agent")
+        print("Install pi: npm install -g @earendil-works/pi-coding-agent")
         sys.exit(1)
 
     out = Path(args.output or "unslop-output").resolve()

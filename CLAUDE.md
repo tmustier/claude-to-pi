@@ -8,21 +8,40 @@ Work through these steps in order.
 
 ## Step 1: Prerequisites
 
-Check what's installed:
+First, check if Homebrew is installed (many tools need it):
+
+```bash
+if command -v brew >/dev/null 2>&1; then
+  echo "✓ Homebrew installed"
+else
+  echo "✗ Homebrew missing — installing..."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  # Add to PATH (Apple Silicon Macs)
+  if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    echo >> ~/.zprofile
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+  fi
+fi
+```
+
+**Note:** Homebrew may ask for the user's Mac password — remind them that nothing appears on screen when typing it (no dots, no asterisks). This is normal.
+
+Then check the rest:
 
 ```bash
 command -v node && echo "✓ node $(node --version)" || echo "✗ node missing"
 command -v npm && echo "✓ npm" || echo "✗ npm missing"
 command -v git && echo "✓ git" || echo "✗ git missing"
 command -v gh && echo "✓ gh" || echo "✗ gh missing"
-command -v pi && echo "✓ pi" || echo "✗ pi missing"
+command -v pi && echo "✓ pi $(pi --version 2>/dev/null || echo '(unknown version)')" || echo "✗ pi missing"
 ```
 
 For anything missing:
 - **node/npm**: "You need Node.js. Go to https://nodejs.org and download the LTS version. Run the installer, then come back."
-- **git**: `brew install git` (if they don't have brew: "Go to https://brew.sh, copy the install command, paste it in your terminal, and run it. It'll ask for your password — remember, nothing shows as you type.")
+- **git**: `brew install git`
 - **gh**: `brew install gh`
-- **pi**: `npm i -g @mariozechner/pi-coding-agent`
+- **pi**: Will be installed/updated in Step 4.
 
 Wait for them to install each missing tool before continuing.
 
@@ -46,11 +65,11 @@ If the claude-to-pi repo isn't already cloned:
 gh repo clone tmustier/claude-to-pi ~/claude-to-pi
 ```
 
-## Step 4: Install Pi and copy your credentials
+## Step 4: Install or update Pi, then copy your credentials
 
-Install Pi if not already:
+Always install/update Pi to the latest version, even if it's already present:
 ```bash
-npm i -g @mariozechner/pi-coding-agent
+npm i -g @earendil-works/pi-coding-agent
 ```
 
 Now copy your Claude credentials into Pi so they don't have to log in again. You (Claude Code) store your Anthropic OAuth tokens in the macOS Keychain. Extract them and write to Pi's auth file:
@@ -113,16 +132,18 @@ Edit `~/.pi/agent/AGENTS.md` and replace the placeholders in the "About You" sec
 ## Step 6: Install skills, agents, prompts, extensions, tools
 
 ```bash
-# Repo-owned custom skills are loaded from settings.template.json via:
-#   "skills": ["~/claude-to-pi/skills"]
-# Do not run `pi install` on each skill directory: individual skill folders are
-# Agent Skills, not Pi packages, and Pi will try to load them as extensions.
+# Skills are loaded automatically via packages in settings.json (pi update pulls them).
+# No need to install individual skill directories manually — Agent Skill folders are
+# not Pi packages, and installing them that way makes Pi try to load skills as
+# extensions. This repo's skills come from git:github.com/tmustier/claude-to-pi.
 python3 - <<'PY'
 import json, pathlib
 
 settings_path = pathlib.Path.home() / '.pi' / 'agent' / 'settings.json'
 settings = json.loads(settings_path.read_text())
 
+# Remove stale entries left by older setup attempts that installed individual
+# claude-to-pi skill directories as packages.
 settings['packages'] = [
     pkg for pkg in settings.get('packages', [])
     if not (
@@ -131,17 +152,13 @@ settings['packages'] = [
     )
 ]
 
-skills = settings.setdefault('skills', [])
-if '~/claude-to-pi/skills' not in skills:
-    skills.append('~/claude-to-pi/skills')
-
 settings_path.write_text(json.dumps(settings, indent=2) + '\n')
 PY
 
 # Clean up any old local copies of skills that now come from an upstream package
-for s in enterprise-sales founder-sales positioning-messaging; do
+for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
   p="$HOME/.pi/agent/skills/$s"
-  [ -L "$p" ] && [ ! -e "$p" ] && rm "$p"
+  [ -L "$p" ] && rm "$p"
 done
 
 # Subagents
@@ -173,6 +190,9 @@ grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' ~/.zshrc 2>/dev/null || echo 'ex
 # Firecrawl (web scraping)
 command -v firecrawl >/dev/null 2>&1 || npm i -g firecrawl-cli
 
+# uv (Python package runner, used by skill-scanner)
+command -v uv >/dev/null 2>&1 || brew install uv
+
 # Video tools (optional, for pi-web-access)
 command -v ffmpeg >/dev/null 2>&1 || brew install ffmpeg
 command -v yt-dlp >/dev/null 2>&1 || brew install yt-dlp
@@ -187,13 +207,7 @@ pi update
 
 This may take a minute. Let the user know.
 
-## Step 9: Set up the alias
-
-```bash
-grep -q 'alias claude="pi"' ~/.zshrc 2>/dev/null || (echo '' >> ~/.zshrc && echo '# Use Pi instead of Claude Code' >> ~/.zshrc && echo 'alias claude="pi"' >> ~/.zshrc)
-```
-
-## Step 10: Hand off to Pi
+## Step 9: Hand off to Pi
 
 Everything mechanical is done. Tell the user:
 
@@ -201,7 +215,7 @@ Everything mechanical is done. Tell the user:
 
 **You're all set up! 🎉**
 
-From now on, type **`pi`** to start your AI assistant (or `claude` — it'll open Pi automatically).
+From now on, type **`pi`** to start your AI assistant.
 
 When Pi starts, type **`/onboard`** to finish connecting your accounts. This takes about 10 minutes and mostly involves signing into things in your browser:
 - Granting Full Disk Access (a macOS permission — Pi walks you through it)

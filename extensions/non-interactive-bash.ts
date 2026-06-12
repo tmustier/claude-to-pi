@@ -10,8 +10,8 @@
  * EDITOR/VISUAL use "false" (exit 1 = fail loudly so the LLM knows to retry).
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { createBashTool } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createBashTool } from "@earendil-works/pi-coding-agent";
 
 const NON_INTERACTIVE_ENV: Record<string, string> = {
   GIT_EDITOR: "true",
