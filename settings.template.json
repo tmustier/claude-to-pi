@@ -15,7 +15,9 @@
     "npm:@tmustier/pi-session-hud",
     {
       "source": "git:github.com/tmustier/pi-extensions",
-      "extensions": ["ralph-wiggum/index.ts"],
+      "extensions": [
+        "ralph-wiggum/index.ts"
+      ],
       "skills": [
         "extending-pi/SKILL.md",
         "extending-pi/skill-creator/SKILL.md",
