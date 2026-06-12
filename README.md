@@ -53,7 +53,7 @@ Pi is not a fixed app with buttons. It's more like a colleague who can learn new
 | **Prompts** | `/onboard`, `/auto-pr`, `/machine-doctor`, `/bootstrap-from-claude-code` |
 | **Subagents** | PR reviewer, code reviewer |
 | **Scripts** | `send-gate` (60s abort window before sending emails) |
-| **Skills** | `unslop` (remove AI patterns), `chrome-cookies` (extract browser sessions), `agent-friendly-design`, `customer-intel`, `tmux`, `todo-audit` |
+| **Skills** | `unslop` (remove AI patterns), `chrome-cookies` (extract browser sessions) |
 
 ### Packages (auto-installed)
 
