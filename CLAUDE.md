@@ -1,6 +1,6 @@
 # Pi Bootstrap
 
-You are helping a **non-technical user** move from Claude Code to Pi (a more extensible coding agent). They may not be comfortable with terminals — explain everything in plain language, go step by step, and confirm each step worked before moving on.
+You are helping a **non-technical user** move from Claude Code to Pi. They may not be comfortable with terminals — explain everything in plain language, go step by step, and confirm each step worked before moving on.
 
 **When they type their password in the terminal, nothing will appear on screen** — no dots, no asterisks. This is normal. Warn them before any password prompt.
 
@@ -8,7 +8,7 @@ Work through these steps in order.
 
 ## Step 1: Prerequisites
 
-First, check if Homebrew is installed (many tools need it):
+First, check if Homebrew is installed:
 
 ```bash
 if command -v brew >/dev/null 2>&1; then
@@ -16,28 +16,30 @@ if command -v brew >/dev/null 2>&1; then
 else
   echo "✗ Homebrew missing — installing..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  # Add to PATH (Apple Silicon Macs)
   if [[ -f /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
-    echo >> ~/.zprofile
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+    grep -Fq '/opt/homebrew/bin/brew' ~/.zprofile 2>/dev/null || {
+      echo >> ~/.zprofile
+      echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+    }
   fi
 fi
 ```
 
-**Note:** Homebrew may ask for the user's Mac password — remind them that nothing appears on screen when typing it (no dots, no asterisks). This is normal.
+**Note:** Homebrew may ask for the user's Mac password — remind them that nothing appears on screen when typing it.
 
 Then check the rest:
 
 ```bash
 command -v node && echo "✓ node $(node --version)" || echo "✗ node missing"
-command -v npm && echo "✓ npm" || echo "✗ npm missing"
-command -v git && echo "✓ git" || echo "✗ git missing"
-command -v gh && echo "✓ gh" || echo "✗ gh missing"
-command -v pi && echo "✓ pi $(pi --version 2>/dev/null || echo '(unknown version)')" || echo "✗ pi missing"
+command -v npm && echo "✓ npm $(npm --version)" || echo "✗ npm missing"
+command -v git && echo "✓ git $(git --version)" || echo "✗ git missing"
+command -v gh && echo "✓ gh $(gh --version | head -n 1)" || echo "✗ gh missing"
+command -v pi && echo "✓ pi $(pi --version 2>/dev/null || echo '(installed)')" || echo "✗ pi missing"
 ```
 
 For anything missing:
+
 - **node/npm**: "You need Node.js. Go to https://nodejs.org and download the LTS version. Run the installer, then come back."
 - **git**: `brew install git`
 - **gh**: `brew install gh`
@@ -47,32 +49,39 @@ Wait for them to install each missing tool before continuing.
 
 ## Step 2: GitHub authentication
 
-Check: `gh auth status`
+Check:
+
+```bash
+gh auth status
+```
 
 If not logged in, walk them through `gh auth login`:
+
 1. Choose **GitHub.com**
 2. Choose **HTTPS**
 3. Choose **Login with a web browser**
-4. It will show a one-time code — tell them to copy it
-5. A browser window opens — paste the code and authorize
+4. Copy the one-time code
+5. Authorize in the browser
 
-After login, verify: `gh auth status`
+After login, verify with `gh auth status`.
 
 ## Step 3: Clone this repo
 
-If the claude-to-pi repo isn't already cloned:
+If the `claude-to-pi` repo is not already cloned:
+
 ```bash
 gh repo clone tmustier/claude-to-pi ~/claude-to-pi
 ```
 
-## Step 4: Install or update Pi, then copy your credentials
+## Step 4: Install or update Pi, then copy Claude credentials
 
-Always install/update Pi to the latest version, even if it's already present:
+Always install/update Pi to the latest version:
+
 ```bash
-npm i -g @earendil-works/pi-coding-agent
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 ```
 
-Now copy your Claude credentials into Pi so they don't have to log in again. You (Claude Code) store your Anthropic OAuth tokens in the macOS Keychain. Extract them and write to Pi's auth file:
+Now copy Claude Code's Anthropic credentials into Pi so the user usually does not need to log in again:
 
 ```bash
 mkdir -p ~/.pi/agent
@@ -80,11 +89,16 @@ mkdir -p ~/.pi/agent
 security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null | python3 -c "
 import sys, json, pathlib
 
-cc = json.loads(sys.stdin.read())
+raw = sys.stdin.read().strip()
+if not raw:
+    print('No Claude Code credentials found — user can run pi /login later')
+    sys.exit(0)
+
+cc = json.loads(raw)
 oauth = cc.get('claudeAiOauth', {})
 
 if not oauth.get('accessToken'):
-    print('No credentials found — user will need to run pi /login')
+    print('No Claude Code credentials found — user can run pi /login later')
     sys.exit(0)
 
 auth = {
@@ -107,21 +121,24 @@ print('✓ Copied Anthropic credentials to Pi')
 "
 ```
 
-If that worked, explain: "I've copied your Claude login to Pi, so you won't need to sign in again."
+If that worked, explain: "I've copied your Claude login to Pi, so you shouldn't need to sign in again."
 
-If it didn't find credentials, tell them: "When you open Pi for the first time, run `/login` to connect your Claude account."
+If no credentials were found, explain: "No problem — when you open Pi, run `/login` and connect your account."
 
-## Step 5: Copy settings and config
+## Step 5: Copy settings and AGENTS.md
 
 ```bash
-# Settings (models, packages, thinking level)
+mkdir -p ~/.pi/agent
+
+# Settings: current scoped models and a small default package set
 cp ~/claude-to-pi/settings.template.json ~/.pi/agent/settings.json
 
-# AGENTS.md (agent guidelines)
+# AGENTS.md: your standing instructions for Pi
 cp ~/claude-to-pi/AGENTS.template.md ~/.pi/agent/AGENTS.md
 ```
 
-Now **personalize AGENTS.md** — ask the user for:
+Now **personalize AGENTS.md**. Ask the user for:
+
 - Their full name
 - Their GitHub username
 - Their role and company
@@ -129,21 +146,18 @@ Now **personalize AGENTS.md** — ask the user for:
 
 Edit `~/.pi/agent/AGENTS.md` and replace the placeholders in the "About You" section.
 
-## Step 6: Install skills, agents, prompts, extensions, tools
+## Step 6: Install prompts, extensions, agents, and local scripts
+
+Skills are loaded through `settings.json` and Pi packages. **Do not run `pi install` on individual skill directories** — Agent Skill folders are not Pi packages, and installing them that way can make Pi try to load skills as extensions.
 
 ```bash
-# Skills are loaded automatically via packages in settings.json (pi update pulls them).
-# No need to install individual skill directories manually — Agent Skill folders are
-# not Pi packages, and installing them that way makes Pi try to load skills as
-# extensions. This repo's skills come from git:github.com/tmustier/claude-to-pi.
+# Clean up stale entries from older setup attempts.
 python3 - <<'PY'
 import json, pathlib
 
 settings_path = pathlib.Path.home() / '.pi' / 'agent' / 'settings.json'
 settings = json.loads(settings_path.read_text())
 
-# Remove stale entries left by older setup attempts that installed individual
-# claude-to-pi skill directories as packages.
 settings['packages'] = [
     pkg for pkg in settings.get('packages', [])
     if not (
@@ -152,10 +166,17 @@ settings['packages'] = [
     )
 ]
 
+# If the user already has Claude Code or Codex skills, let Pi discover them too.
+skills = settings.setdefault('skills', [])
+for candidate in ['~/.claude/skills', '~/.codex/skills']:
+    expanded = pathlib.Path(candidate).expanduser()
+    if expanded.exists() and candidate not in skills:
+        skills.append(candidate)
+
 settings_path.write_text(json.dumps(settings, indent=2) + '\n')
 PY
 
-# Clean up any old local copies of skills that now come from an upstream package
+# Remove old local skill symlinks that would duplicate package-managed skills.
 for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
   p="$HOME/.pi/agent/skills/$s"
   [ -L "$p" ] && rm "$p"
@@ -173,39 +194,39 @@ cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
 mkdir -p ~/.pi/agent/extensions
 cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
 
-# send-gate (outbound email safety net)
+# send-gate: outbound email safety net
 mkdir -p ~/.local/bin
 cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate
 chmod +x ~/.local/bin/send-gate
 ```
 
 Make sure `~/.local/bin` is on PATH:
+
 ```bash
 grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' ~/.zshrc 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 ```
 
-## Step 7: Install external tools
+## Step 7: Optional external tools
+
+The default packages mostly install themselves via `pi update`. These extra tools improve media/web workflows:
 
 ```bash
-# Firecrawl (web scraping)
-command -v firecrawl >/dev/null 2>&1 || npm i -g firecrawl-cli
-
-# uv (Python package runner, used by skill-scanner)
-command -v uv >/dev/null 2>&1 || brew install uv
-
-# Video tools (optional, for pi-web-access)
+# Video tools for YouTube/video analysis in pi-web-access
 command -v ffmpeg >/dev/null 2>&1 || brew install ffmpeg
 command -v yt-dlp >/dev/null 2>&1 || brew install yt-dlp
 ```
 
+If the user wants browser automation via `surf-cli`, finish that later from `/onboard`; it requires a Chrome extension and native host setup.
+
 ## Step 8: Pull Pi packages
 
-This downloads all the packages configured in settings.json, including upstream GTM skills (`enterprise-sales`, `founder-sales`, `positioning-messaging`) from `refoundai/lenny-skills`:
+This downloads the packages configured in `settings.json`:
+
 ```bash
 pi update
 ```
 
-This may take a minute. Let the user know.
+This may take a few minutes. Let the user know.
 
 ## Step 9: Hand off to Pi
 
@@ -213,21 +234,22 @@ Everything mechanical is done. Tell the user:
 
 ---
 
-**You're all set up! 🎉**
+**You're set up!**
 
 From now on, type **`pi`** to start your AI assistant.
 
-When Pi starts, type **`/onboard`** to finish connecting your accounts. This takes about 10 minutes and mostly involves signing into things in your browser:
-- Granting Full Disk Access (a macOS permission — Pi walks you through it)
-- Setting up Chrome browser control
-- Setting up a daily auto-update
+When Pi starts, type **`/onboard`** to finish the interactive setup. Pi will check what is already done and skip completed steps.
 
-Pi will skip anything that's already done and only ask you about the remaining bits.
+**Quick orientation:**
 
-**Quick shortcuts to remember:**
-- **⌘P** — switch AI models (Opus for empathy/taste, GPT-5.4 for raw smarts, Sonnet for speed)
-- **⇧Tab** — toggle extended thinking
-- **/** — command palette
-- **Esc** — cancel anything
+- **Ctrl+P** — cycle scoped models; use **`/scoped-models`** to choose which models appear.
+- **Shift+Tab** — cycle thinking level.
+- **Alt+Enter** — queue a follow-up message for after Pi finishes working.
+- **`/tree`** or **Esc twice while idle** — open the conversation tree, branch, fork, or move through history.
+- **`/name <name>`** — name important sessions so `/resume` is easier.
+- **`/reload`** — hot-reload new extensions, skills, prompts, and context files.
+- **`/hotkeys`** — see the full current shortcut list.
+
+Pi has excellent local docs and can extend itself. If something feels missing, ask: **"Can you check Pi's docs and add the lightest-weight way to do X?"**
 
 ---

@@ -1,74 +1,95 @@
 # claude-to-pi
 
-Move from Claude Code to [Pi](https://pi.dev/) — a more extensible AI coding agent. Designed for non-technical users who want an AI assistant that can search the web, manage email, create documents, and build its own new tools on the fly.
+Move from Claude Code to [Pi](https://pi.dev/) — a small, highly-extensible terminal coding agent. Pi intentionally starts lean: a few strong built-in tools, excellent local docs, and extension points for almost everything else.
 
-This repo gives you a one-paste bootstrap that installs Pi, copies your Claude credentials, sets up packages and extensions, and walks you through everything step by step.
+This repo gives Claude Code a one-paste migration path: install/update Pi, copy your Claude credentials, install a small set of useful defaults, and then let Pi help you extend only what you actually need.
 
 ## Getting started
 
 Open Claude Code and paste this:
 
-```
+```text
 Please read ~/claude-to-pi/CLAUDE.md and follow the setup instructions. If ~/claude-to-pi doesn't exist, clone it first: gh repo clone tmustier/claude-to-pi ~/claude-to-pi — but before that, make sure gh is installed and authenticated (brew install gh && gh auth login if needed). I'm not very technical so please explain everything simply and go step by step.
 ```
 
 Claude Code will:
-1. Install any missing tools (Node.js, GitHub CLI, Pi)
-2. Copy your Claude login to Pi (no need to sign in again)
-3. Install settings, extensions, and packages
-4. Tell you to open Pi and type `/onboard`
 
-The `/onboard` command in Pi finishes the interactive setup — granting Full Disk Access, connecting services, and giving you a tour.
+1. Install any missing prerequisites and update Pi.
+2. Copy your Claude login to Pi, if Claude Code has one saved.
+3. Install a lightweight Pi setup: settings, AGENTS.md, prompts, extensions, and selected packages.
+4. Tell you to open Pi and type `/onboard` for the interactive bits.
 
-## What can Pi do?
+The `/onboard` prompt in Pi finishes setup — Full Disk Access, browser automation, optional Claude Code migration, and a quick tour.
 
-Everything Claude Code can, plus:
+## Current Pi mental model
 
-- **"Create an HTML page showing [data]"** — builds interactive charts and dashboards, then `/open` to view in your browser
-- **"Make me a slide deck about [topic]"** — generates PowerPoint files
-- **"Search the web for [topic]"** — finds articles and summarises them
-- **"Draft an email to [person] about [topic]"** — writes it, previews, waits for your OK before sending
-- **"Read this PDF and summarise it"** — reads, merges, splits, OCRs documents
-- **"Make that less AI-sounding"** — rewrites to remove generic AI patterns
-- **"Can you build me a tool that does X?"** — Pi can create its own new extensions and commands
+Pi is not a fixed app with a huge default feature set. It is a minimal harness that can be shaped with:
 
-Pi is not a fixed app with buttons. It's more like a colleague who can learn new tricks. If you can describe what you want, it can probably do it — or build itself the ability to.
+- **Agent Skills** — markdown workflows and tool instructions loaded on demand.
+- **Prompt templates** — slash commands such as `/onboard` or `/machine-doctor`.
+- **Extensions** — TypeScript modules that can add tools, commands, keybindings, UI, model providers, compaction, and safety gates.
+- **Pi Packages** — reusable bundles of extensions, skills, prompts, and themes from npm or git.
 
-## Key shortcuts
+Pi can read its own local docs. If something feels missing, ask Pi to check its docs and either configure an existing extension/package or build a small one for your workflow. Use `/reload` after changing extensions, skills, prompts, or context files in a running session.
 
-| Shortcut | What it does |
-|----------|-------------|
-| **⌘P** | Switch AI models — Opus (empathy & taste) ↔ GPT-5.4 (raw smarts) ↔ Sonnet (speed) |
-| **⇧Tab** | Toggle deep thinking on/off |
-| **/** | Command palette — saved workflows |
-| **Esc** | Cancel anything |
+## Native shortcuts to know
 
-## What's included
+Run `/hotkeys` inside Pi for the authoritative list; shortcuts are user-customisable. Current high-use defaults:
+
+| Shortcut / command | What it does |
+| --- | --- |
+| **Ctrl+P** / **Shift+Ctrl+P** | Cycle forward/back through your scoped model list. |
+| **`/scoped-models`** | Choose which models Ctrl+P cycles through, and save the order. |
+| **Shift+Tab** | Cycle thinking level. |
+| **Alt+Enter** | Queue a follow-up message that sends only after Pi finishes all current work. |
+| **Enter while Pi is working** | Queue steering for the active turn, similar to Claude Code-style interruption. |
+| **`/tree`** or **Esc twice while idle** | Open the conversation tree; branch, fork, and move through history. |
+| **`/name <name>`** | Name the session so `/resume` is easier later. |
+| **`/reload`** | Hot-reload extensions, skills, prompts, and context files. |
+
+## What this repo installs
+
+This repo aims for useful defaults without turning Pi into a giant pre-bundled distro.
 
 | Category | Contents |
-|----------|---------|
-| **Settings** | 3 models (Opus 4.6, Sonnet 4.6, GPT-5.4), xhigh thinking, curated packages |
-| **AGENTS.md** | Non-technical user guidance, outbound email safety, proactive git handling |
-| **Extensions** | Startup tips (32), `/open` command, `.claude/rules/` compatibility |
-| **Prompts** | `/onboard`, `/auto-pr`, `/machine-doctor`, `/bootstrap-from-claude-code` |
-| **Subagents** | PR reviewer, code reviewer |
-| **Scripts** | `send-gate` (60s abort window before sending emails) |
-| **Skills** | `unslop` (remove AI patterns), `chrome-cookies` (extract browser sessions), `agent-friendly-design`, `customer-intel`, `tmux`, `todo-audit` |
+| --- | --- |
+| **Settings** | Current Anthropic/OpenAI-Codex scoped models, xhigh thinking, and a small default package set. |
+| **AGENTS.md** | Plain-language working style, current model policy, git hygiene, send-gate, and non-interactive command guidance. |
+| **Extensions** | `/open`, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, and `/update`. |
+| **Prompts** | `/onboard`, `/machine-doctor`, `/auto-pr`, `/bootstrap-from-claude-code`. |
+| **Subagents** | PR reviewer and general reviewer agent definitions. |
+| **Scripts** | `send-gate` — a 60s abort window before outbound email sends. |
+| **Skills** | `agent-friendly-design`, `chrome-cookies`, `customer-intel`, `tmux`, `todo-audit`, `unslop`. |
 
-### Packages (auto-installed)
+### Default packages
 
-Pi extensions, agent-browser, pi-web-access, surf-cli (Chrome control), pi-design-deck, pi-interview-tool, pi-autoresearch, pi-symphony, pi-agent-teams, upstream GTM skills from `refoundai/lenny-skills`, and more. Plus [impeccable](https://impeccable.style) (20+ design skills, installed separately).
+The template keeps package defaults deliberately small:
+
+- `pi-subagents` — chains, parallel/background agents, and dynamic workflows.
+- `pi-mcp-adapter` — MCP support when you decide you need it.
+- `pi-web-access` — web search, page fetching, YouTube/video handling.
+- `agent-browser` and `surf-cli` — browser automation options.
+- Anthropic document Agent Skills for `docx`, `pdf`, and `xlsx`.
+- This repo's own Agent Skills from `tmustier/claude-to-pi`.
+
+If you want plan mode, todos, command approvals, sandboxing, background shells, CRM tools, or a different browser workflow, ask Pi first. There may already be a maintained extension; if not, Pi can usually build a focused one.
+
+## Good optional additions
+
+- **Reuse existing skills:** add `~/.claude/skills` or `~/.codex/skills` to Pi settings if those directories exist, or symlink useful skills into `~/.pi/agent/skills/`.
+- **Secrets brokering:** consider Infisical / agent-vault-style workflows for sensitive credentials.
+- **Isolation:** consider a local QEMU micro-VM / `pi-gondolin` style setup for stronger tool sandboxing.
+- **MCP:** keep MCP servers purposeful. Prefer a simple CLI + Agent Skill when that is enough; use MCP for real external execution surfaces.
 
 ## Customising for your team
 
-This repo is designed to be forked and customised. Add your own:
+Fork the repo and edit:
 
-- **Skills** in `skills/` — team-specific tools (CRM integrations, internal APIs, etc.)
-- **Prompt templates** in `prompts/` — reusable workflows
-- **Subagents** in `agents/` — specialised reviewers or workers
-- **Extensions** in `extensions/` — custom commands and UI
-
-Edit `AGENTS.template.md` to add your team's conventions, tool access, and MCP servers. Edit `settings.template.json` to add or remove packages.
+- `AGENTS.template.md` — your team conventions, addresses, safety rules, and source-of-truth systems.
+- `settings.template.json` — package list, scoped models, and resource paths.
+- `prompts/` — reusable workflows.
+- `skills/` — team-specific Agent Skills.
+- `extensions/` — runtime behaviour, custom tools, commands, UI, or safety gates.
 
 ## License
 

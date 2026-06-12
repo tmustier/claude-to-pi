@@ -73,16 +73,16 @@ const tips = [
 
 	// ── Pi tips ────────────────────────────────────────────────────
 	{
-		title: "Switch models with ⌘P",
-		tip: "Opus has more empathy and taste — great for writing, creative work, and nuanced tasks. GPT-5.4 is smarter but very literal and less pleasant to work with. Sonnet is faster for simple things. Switch anytime with ⌘P.",
+		title: "Cycle scoped models with Ctrl+P",
+		tip: "Press Ctrl+P to cycle through your scoped model list. Use /scoped-models to choose which models appear and save the order.",
 	},
 	{
-		title: "Toggle thinking with ⇧Tab",
-		tip: "Extended thinking is on by default — great for complex tasks but slower. Press ⇧Tab to turn it off for quick questions, then back on for deep work.",
+		title: "Change thinking level",
+		tip: "Use Shift+Tab to cycle thinking level. Keep higher thinking for complex work; lower it for quick questions. /hotkeys shows the exact binding for your setup.",
 	},
 	{
 		title: "The / command palette",
-		tip: "Type / to see all available commands. Key ones: /auto-pr (implement & merge), /machine-doctor (check your setup), /open (open files), /review (code review).",
+		tip: "Type / to see available commands. Useful ones from this setup include /onboard, /machine-doctor, /auto-pr, /bootstrap-from-claude-code, and /open.",
 	},
 	{
 		title: "Be specific",
@@ -105,8 +105,20 @@ const tips = [
 		tip: "You can paste multi-line content directly into Pi — email threads, documents, data. Pi handles it all. Use Shift+Enter if you need to type multiple lines yourself.",
 	},
 	{
-		title: "Side chats",
-		tip: "Need a quick answer without derailing your current conversation? Use /side-chat to fork into a separate thread. The main conversation stays untouched.",
+		title: "Queue a follow-up",
+		tip: "While Pi is working, Alt+Enter queues a follow-up that waits until all current work is done. Press Enter instead when you want to steer the active turn.",
+	},
+	{
+		title: "Use the conversation tree",
+		tip: "Type /tree, or press Esc twice while Pi is idle, to branch, fork, and move through previous points in the session without losing history.",
+	},
+	{
+		title: "Name important sessions",
+		tip: "Use /name <short-name> on important work. Later, /resume is much easier because you can find the session by name.",
+	},
+	{
+		title: "Hot-reload changes",
+		tip: "After Pi edits an extension, skill, prompt, or AGENTS.md, use /reload to load the new behaviour without starting a fresh session.",
 	},
 ];
 

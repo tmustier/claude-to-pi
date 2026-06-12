@@ -1,160 +1,222 @@
 ---
-description: Finish Pi setup — Full Disk Access, Chrome control, daily updates, Claude Code migration
+description: Finish Pi setup — permissions, browser automation, package pull, and orientation
 ---
 
 You're helping a user finish setting up their Pi environment. They may not be technical — explain everything in plain language, go one step at a time, and confirm each step worked before moving on.
 
-**The user likely got here from the bootstrap flow** (CLAUDE.md run via Claude Code). That means Pi, settings, AGENTS.md, skills, extensions, prompts, and external tools are probably already installed. **Check what's already done before each step and skip it if complete.** Don't redo work — just confirm with a quick "✓ already done" and move on.
+The user likely got here from the bootstrap flow (`CLAUDE.md` run via Claude Code). That means Pi, settings, AGENTS.md, prompts, extensions, and packages may already be installed. **Check before each step and skip anything already done.**
 
-If nothing has been set up yet (they came here directly), work through all steps. Otherwise focus on the interactive steps that the bootstrap couldn't do.
-
-Work through the following steps in order. **After each step, check it worked** and give a brief ✓ summary before moving on.
+Pi intentionally starts lean. The goal is not to install every shiny package. Start with a useful small setup, notice friction, and add exactly what the user needs.
 
 ## Step 1: Full Disk Access
 
-Pi needs Full Disk Access on macOS to read things like browser data and local app caches. Without it, some skills won't work.
+Pi may need Full Disk Access on macOS to read local app data such as Messages, browser data, and caches.
 
 Walk the user through granting it:
 
-1. Open System Settings (you can run `open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"` to jump straight there)
-2. Go to **Privacy & Security → Full Disk Access**
-3. Click the **+** button
-4. Find and add their **terminal app** — this is whatever app they use to run Pi (e.g., Terminal, iTerm2, Ghostty, Warp). If they're not sure which one, ask them what app they typed `pi` into.
-5. They may need to toggle it off and on, or restart the terminal app, for it to take effect.
+1. Open System Settings. You can run:
+   ```bash
+   open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+   ```
+2. Go to **Privacy & Security → Full Disk Access**.
+3. Click **+**.
+4. Add the terminal app they use to run Pi — Terminal, iTerm2, Ghostty, Warp, etc.
+5. Quit and reopen the terminal app if access still fails.
 
-Verify it worked:
+Verify:
+
 ```bash
 ls ~/Library/Messages/chat.db 2>/dev/null && echo "✓ Full Disk Access is working" || echo "✗ Full Disk Access not granted yet"
 ```
 
-If it fails, explain they need to quit and reopen their terminal app after granting access.
+If it fails, explain that they probably need to restart the terminal after granting access.
 
 ## Step 2: Check prerequisites
 
-First check Homebrew (needed to install several tools):
 ```bash
 command -v brew >/dev/null 2>&1 && echo "✓ Homebrew" || echo "✗ Homebrew missing"
+command -v node >/dev/null 2>&1 && echo "✓ node $(node --version)" || echo "✗ node missing"
+command -v npm >/dev/null 2>&1 && echo "✓ npm $(npm --version)" || echo "✗ npm missing"
+command -v git >/dev/null 2>&1 && echo "✓ git $(git --version)" || echo "✗ git missing"
+command -v gh >/dev/null 2>&1 && echo "✓ gh $(gh --version | head -n 1)" || echo "✗ gh missing"
+command -v pi >/dev/null 2>&1 && echo "✓ pi $(pi --version 2>/dev/null || echo installed)" || echo "✗ pi missing"
 ```
-If missing, install it:
+
+For anything missing, give the exact command. Typical fixes:
+
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-if [[ -f /opt/homebrew/bin/brew ]]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-  grep -Fq '/opt/homebrew/bin/brew' ~/.zprofile 2>/dev/null || {
-    echo >> ~/.zprofile
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-  }
-fi
+brew install git gh
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 ```
 
-Then check that `node`, `npm`, `git`, `gh`, `pi`, `uv` are installed. For anything missing, give the exact install command (`brew install gh`, `brew install uv`, etc.) and wait.
+Also check GitHub auth:
 
-Also check `gh auth status`.
+```bash
+gh auth status
+```
 
-**Important password note:** Several steps during setup will ask for their Mac login password in the terminal. **When they type their password, nothing will appear on screen** — no dots, no asterisks, nothing. This is normal and expected! Warn them before any password prompt.
+Password note: if a command asks for their Mac password, nothing will appear while typing. That is normal.
 
-## Step 3: Pi settings
+## Step 3: Pi settings and model scope
 
-Check if `~/.pi/agent/settings.json` exists. If not, copy from `~/claude-to-pi/settings.template.json`.
+Check whether settings exist:
 
-Explain the models: "Opus has more empathy and taste — it's better for writing, creative work, and anything where tone matters. GPT-5.4 is smarter and more precise but very literal and less pleasant to interact with. Sonnet is a lighter, faster version of Opus for quick questions. Switch anytime with ⌘P."
+```bash
+test -f ~/.pi/agent/settings.json && echo "✓ settings.json exists" || echo "✗ settings.json missing"
+```
+
+If missing, copy the template:
+
+```bash
+mkdir -p ~/.pi/agent
+cp ~/claude-to-pi/settings.template.json ~/.pi/agent/settings.json
+```
+
+Explain model scope in plain language:
+
+- `Ctrl+P` cycles through the scoped model list.
+- `/scoped-models` lets them choose which models appear and in what order.
+- This setup defaults to `anthropic/claude-opus-4-8` so Claude Code users can usually start with their copied Anthropic login.
+- `openai-codex/gpt-5.5` is included as the precision/code-review model once OpenAI/Codex auth is connected.
+
+If OpenAI/Codex is not connected, tell them they can run `/login` later.
 
 ## Step 4: AGENTS.md
 
-Check if `~/.pi/agent/AGENTS.md` exists. If not, copy from `~/claude-to-pi/AGENTS.template.md` and personalize — ask for their name, GitHub username, role, company, and email.
-
-## Step 5: Skills, prompts, extensions
-
-Skills are loaded automatically via packages in `settings.json` (the `git:github.com/tmustier/claude-to-pi` entry). **Do not run `pi install` on the skill directories** — that would create duplicate entries and cause extension load errors.
-
-Clean up any local skill symlinks from previous installs (whether broken or still valid) to avoid duplicates with the package-managed versions:
+Check whether `~/.pi/agent/AGENTS.md` exists. If not, copy and personalize it:
 
 ```bash
+mkdir -p ~/.pi/agent
+cp ~/claude-to-pi/AGENTS.template.md ~/.pi/agent/AGENTS.md
+```
+
+Ask for:
+
+- Full name
+- GitHub username
+- Role and company
+- Email
+
+Then edit the "About You" section.
+
+## Step 5: Skills, prompts, extensions, and scripts
+
+Skills are loaded by Pi package/settings discovery. **Do not run `pi install` on individual skill directories.**
+
+Run the safe setup pass:
+
+```bash
+python3 - <<'PY'
+import json, pathlib
+
+settings_path = pathlib.Path.home() / '.pi' / 'agent' / 'settings.json'
+settings = json.loads(settings_path.read_text())
+
+settings['packages'] = [
+    pkg for pkg in settings.get('packages', [])
+    if not (isinstance(pkg, str) and 'claude-to-pi/skills/' in pkg)
+]
+
+skills = settings.setdefault('skills', [])
+for candidate in ['~/.claude/skills', '~/.codex/skills']:
+    expanded = pathlib.Path(candidate).expanduser()
+    if expanded.exists() and candidate not in skills:
+        skills.append(candidate)
+
+settings_path.write_text(json.dumps(settings, indent=2) + '\n')
+PY
+
 for s in enterprise-sales founder-sales positioning-messaging agent-friendly-design chrome-cookies customer-intel tmux todo-audit unslop; do
   p="$HOME/.pi/agent/skills/$s"
   [ -L "$p" ] && rm "$p" && echo "Removed stale symlink: $s"
 done
-```
 
-If the bootstrap hasn't already copied agents, prompts, and extensions (check if `~/.pi/agent/agents/reviewer.md` exists), install them:
-
-```bash
-mkdir -p ~/.pi/agent/agents && cp ~/claude-to-pi/agents/*.md ~/.pi/agent/agents/
-mkdir -p ~/.pi/agent/prompts && cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
-mkdir -p ~/.pi/agent/extensions && cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
-mkdir -p ~/.local/bin && cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate && chmod +x ~/.local/bin/send-gate
+mkdir -p ~/.pi/agent/agents ~/.pi/agent/prompts ~/.pi/agent/extensions ~/.local/bin
+cp ~/claude-to-pi/agents/*.md ~/.pi/agent/agents/
+cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
+cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
+cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate
+chmod +x ~/.local/bin/send-gate
 ```
 
 ## Step 6: Pull packages
 
-Run `pi update` if packages haven't been pulled yet. This also installs the upstream GTM skills `enterprise-sales`, `founder-sales`, and `positioning-messaging` from `refoundai/lenny-skills`.
-
-## Step 7: pi-web-access setup
-
-pi-web-access can work zero-config if the user is signed into Google in Chrome. Check if Chrome is installed:
+Run:
 
 ```bash
-ls "/Applications/Google Chrome.app" >/dev/null 2>&1 && echo "Chrome found" || echo "Chrome not found"
+pi update
 ```
 
-If Chrome is installed and they're signed into Google, it should just work. Otherwise, they can add API keys later to `~/.pi/web-search.json`.
+Explain: this updates Pi and downloads the packages listed in `settings.json`. It may take a few minutes.
 
-Explain: "Pi can search the web, fetch pages, understand YouTube videos, and analyze screen recordings. If you're signed into Google in Chrome, it works automatically."
+## Step 7: Browser automation
 
-## Step 8: Impeccable (design skills)
+This setup includes two browser options:
 
-Impeccable adds 20+ design skills (animate, polish, critique, typeset, adapt, etc.). It's not a Pi package — it installs separately.
+- `agent-browser` — strong general browser automation; use it when Pi needs to open pages, click, fill forms, test web apps, or take screenshots.
+- `surf-cli` — controls the user's real Chrome profile via a Chrome extension/native host, useful when logged-in browser state matters.
+
+For `surf-cli`, walk through only if the user wants live-Chrome control now:
+
+1. Install CLI if missing:
+   ```bash
+   npm install -g surf-cli
+   ```
+2. Get extension path:
+   ```bash
+   surf extension-path
+   ```
+3. Open `chrome://extensions` in Chrome.
+4. Turn **Developer mode** on.
+5. Click **Load unpacked** and select the path from step 2.
+6. Copy the extension ID.
+7. Install native host:
+   ```bash
+   surf install <extension-id>
+   ```
+8. Restart Chrome completely.
+9. Test:
+   ```bash
+   surf tab.list
+   ```
+
+If this is too much for now, skip it. Pi can still use `agent-browser` or normal web-fetch/search tools.
+
+## Step 8: MCP, only when useful
+
+`pi-mcp-adapter` is installed as a default package, but do not add MCP servers just because they exist.
+
+Explain:
+
+- Use a simple CLI + Agent Skill when that is enough.
+- Use MCP when Pi needs a real external execution surface or maintained integration.
+- If they name a service, ask Pi to check whether a current MCP package/config exists.
+
+## Step 9: Optional isolation and secrets
+
+Do **not** configure heavy safety infrastructure by default. Mention options only if relevant:
+
+- Secrets brokering via Infisical / agent-vault-style workflows.
+- Tool sandboxing via a local micro-VM / `pi-gondolin` style setup.
+
+## Step 10: Migrate from Claude Code
+
+Check if Claude Code exists:
 
 ```bash
-ls ~/.agents/skills/adapt >/dev/null 2>&1 && echo "✓ Impeccable already installed" || echo "✗ Not installed"
+command -v claude >/dev/null 2>&1 && echo "Claude Code command found" || echo "Claude Code command not found"
 ```
-
-If not installed, tell the user to visit [impeccable.style](https://impeccable.style), download the ZIP for Pi, and extract it. Or skip for now — design skills are nice-to-have.
-
-## Step 9: surf-cli setup
-
-surf-cli gives Pi direct control over your actual Chrome browser — the one you're already logged into, with all your sessions and cookies. Much better than Playwright (which spins up a separate empty browser). Walk them through it:
-
-1. Install: `npm i -g surf-cli`
-2. Get the extension path: `surf extension-path` — copy the path it prints
-3. In Chrome, go to `chrome://extensions`
-4. Toggle **Developer mode** on (top-right switch)
-5. Click **Load unpacked**, paste the path from step 2
-6. Copy the **extension ID** — the long string of letters under the Surf extension
-7. Install native host: `surf install <paste-extension-id-here>`
-8. **Restart Chrome completely** (quit and reopen), then test: `surf tab.list`
-
-If it shows their open tabs, it's working.
-
-Explain: "This lets Pi see and control your Chrome tabs directly — it can read pages you're looking at, fill forms, click buttons, all in your actual browser where you're already logged into everything."
-
-## Step 10: Auto-update cron job
-
-Set up a daily job at 4:04 AM to keep Pi packages updated:
-
-```bash
-(crontab -l 2>/dev/null; echo "4 4 * * * npm install -g @earendil-works/pi-coding-agent >> /tmp/pi-update.log 2>&1 && $(which pi) update >> /tmp/pi-update.log 2>&1") | crontab -
-```
-
-Explain: "I've set up a daily job that keeps your Pi packages updated automatically. You don't need to think about it."
-
-## Step 11: Migrate from Claude Code
-
-Check if Claude Code is installed: `command -v claude >/dev/null 2>&1`
 
 If found:
 
-1. Check for custom commands/skills in `~/.claude/commands/` and `~/.claude/skills/`
-2. **Pi does not auto-discover Claude Code skills.** Ask the user if they want to keep any of them.
-3. Simple slash commands → convert to Pi prompt templates now
-4. Skills that already exist in Pi → tell the user and skip
-5. Complex items → create a todo in `~/todo/` with the original content and a migration plan
+1. Check `~/.claude/commands/` and `~/.claude/skills/`.
+2. Simple slash commands can become Pi prompt templates in `~/.pi/agent/prompts/`.
+3. Existing Claude/Codex Agent Skills can be loaded from settings when those directories exist.
+4. Complex migration items should become small follow-up tasks, not a rushed all-at-once conversion.
 
-### Alias claude → pi (optional)
+### Optional alias: `claude` → `pi`
 
-**Ask the user** if they'd like to redirect the `claude` command to open Pi instead. Be upfront about what this does — it's not just a shortcut, it replaces the behaviour of an existing command.
-
-Something like: "One last thing — would you like me to make it so typing `claude` opens Pi instead of Claude Code? This means if you type `claude` in your terminal, you'll get Pi — not Claude Code. Claude Code stays installed and you can still run it directly at its full path, but the `claude` command would point here. Some people find it handy since the muscle memory is hard to shake, but it's completely optional — you can always just type `pi`."
+Ask before doing this. Be explicit: it changes what happens when they type `claude`.
 
 If they say yes:
 
@@ -166,19 +228,19 @@ grep -q 'alias claude="pi"' ~/.zshrc 2>/dev/null || {
 }
 ```
 
-If they say no, that's fine — move on. Don't push it.
+If they say no, leave it alone.
 
-Either way, note: Pi already reads `CLAUDE.md` files and the `claude-rules` extension picks up `.claude/rules/` folders. Project-level Claude Code configuration carries over automatically.
+## Step 11: Quick orientation
 
-## Step 12: Quick orientation
+Give this tour:
 
-Give them a brief tour:
+- **Ctrl+P** cycles scoped models; use **`/scoped-models`** to edit the list.
+- **Shift+Tab** cycles thinking level. `/hotkeys` is the source of truth if their keybindings differ.
+- **Alt+Enter** queues a follow-up message that waits until Pi finishes all current work.
+- **Enter while Pi is working** queues steering for the active turn.
+- **`/tree`** or **Esc twice while idle** opens the conversation tree for branch/fork/time-travel control.
+- **`/name <name>`** names a session so `/resume` is easier.
+- **`/reload`** hot-reloads extensions, skills, prompts, and context files.
+- **Pi can read its own docs** and can extend itself. If something is missing, ask it to check docs and add the lightest-weight solution.
 
-- **⌘P** switches between models — Opus for empathy and taste, GPT-5.4 for raw smarts, Sonnet for speed
-- **⇧Tab** toggles extended thinking — on by default, turn off for simple questions
-- **/** opens the command palette — `/auto-pr`, `/machine-doctor`, etc.
-- **`/open`** opens any file from Pi in their default app
-- They can just ask in natural language — write documents, search the web, create HTML dashboards, draft emails
-- **If Pi can't do something yet**, just ask: "Can you build me a tool that does X?" — it can extend itself
-
-Ask if they have any questions or want to try anything out!
+Ask whether they want to try a small real task now.

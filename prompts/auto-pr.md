@@ -19,13 +19,16 @@ Please read all you need, then implement and open a PR, following this process:
 
 ### Running the review subagent
 
-Use the `pr-reviewer` subagent with the diff piped in. Example:
+Use the `pr-reviewer` subagent with the diff and PR context. Example shape:
 
-```
-subagent(agent: "pr-reviewer", task: "Review PR #<number> against <base_branch>.\n\n<diff>\n$(git diff origin/<base_branch>...HEAD)\n</diff>")
+```text
+subagent({
+  agent: "pr-reviewer",
+  task: "Review PR #<number> against <base_branch>.\n\n<diff>\n$(git diff origin/<base_branch>...HEAD)\n</diff>"
+})
 ```
 
-The subagent returns markdown findings. Write them to a temp file and post via `gh pr comment`.
+If the exact subagent invocation syntax differs in this Pi session, inspect the available subagent tool/help first. The subagent returns markdown findings. Write them to a temp file and post via `gh pr comment`.
 
 ### After merge — quick self-check
 

@@ -1,6 +1,6 @@
 # Unslop profile for blog writing, essays, and articles.
 
-Generated from 100 samples. Use as a Claude Code skill, CLAUDE.md entry, or system prompt.
+Generated from 100 samples. Use as an Agent Skill reference, AGENTS.md / CLAUDE.md entry, or system prompt.
 
 ---
 

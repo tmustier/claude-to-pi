@@ -71,11 +71,11 @@ Tell the user: "Let's make sure Pi can talk to Claude. I'm going to do a quick t
 
 The fact that they're running this prompt inside Pi and getting a response means it worked. Confirm that to them.
 
-### 4. OpenAI (optional)
+### 4. OpenAI/Codex (optional)
 
-Claude Code does NOT store OpenAI credentials — only Anthropic. If the user wants to use GPT-5.4 in Pi (one of the three models we set up), they'll need to log in to OpenAI separately:
+Claude Code does NOT store OpenAI credentials — only Anthropic. If the user wants to use `openai-codex/gpt-5.5` from this setup's scoped model list, they'll need to log in to OpenAI/Codex separately:
 
-Tell them: "You're now authenticated with Claude (Anthropic). If you also want access to GPT-5.4, run `/login` and connect your OpenAI/ChatGPT account. This is optional — you can use Pi with just Claude models."
+Tell them: "You're now authenticated with Claude (Anthropic). If you also want access to the OpenAI Codex model, run `/login` and connect your OpenAI/ChatGPT/Codex account. This is optional — you can use Pi with just Claude models."
 
 ### Notes
 - The tokens are OAuth refresh tokens, so they'll auto-renew. The user doesn't need to re-do this.

@@ -5,3 +5,6 @@ __pycache__/
 *.env
 *.env.*
 !*.env.example
+
+# Local Pi project config/extensions should not be committed; package resources live in top-level dirs.
+.pi/
