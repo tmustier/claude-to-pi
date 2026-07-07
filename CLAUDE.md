@@ -130,8 +130,11 @@ If no credentials were found, explain: "No problem — when you open Pi, run `/l
 ```bash
 mkdir -p ~/.pi/agent
 
-# Settings: current scoped models and a small default package set
+# Settings: current scoped models, compaction defaults, and a small default package set
 cp ~/claude-to-pi/settings.template.json ~/.pi/agent/settings.json
+
+# Soft context compaction config: Claude models compact gently around 200k tokens mid-loop
+cp ~/claude-to-pi/soft-context-compaction.json ~/.pi/agent/soft-context-compaction.json
 
 # AGENTS.md: your standing instructions for Pi
 cp ~/claude-to-pi/AGENTS.template.md ~/.pi/agent/AGENTS.md
@@ -190,7 +193,8 @@ cp ~/claude-to-pi/agents/*.md ~/.pi/agent/agents/
 mkdir -p ~/.pi/agent/prompts
 cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
 
-# Extensions
+# Extensions, including:
+# - model-compaction-trigger.ts: post-run compaction at 120k, plus Claude-only soft context compaction at 200k during long tool loops
 mkdir -p ~/.pi/agent/extensions
 cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
 

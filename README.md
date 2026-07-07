@@ -53,9 +53,9 @@ This repo aims for useful defaults without turning Pi into a giant pre-bundled d
 
 | Category | Contents |
 | --- | --- |
-| **Settings** | Current Anthropic/OpenAI-Codex scoped models, xhigh thinking, and a small default package set. |
+| **Settings** | Current Anthropic/OpenAI-Codex scoped models, xhigh thinking, Pi compaction defaults, and a small default package set. |
 | **AGENTS.md** | Plain-language working style, current model policy, git hygiene, send-gate, and non-interactive command guidance. |
-| **Extensions** | `/open`, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, and `/update`. |
+| **Extensions** | `/open`, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, `/update`, and model/context compaction safeguards. |
 | **Prompts** | `/onboard`, `/machine-doctor`, `/auto-pr`, `/bootstrap-from-claude-code`. |
 | **Subagents** | PR reviewer and general reviewer agent definitions. |
 | **Scripts** | `send-gate` — a 60s abort window before outbound email sends. |
@@ -73,6 +73,15 @@ The template keeps package defaults deliberately small:
 - This repo's own Agent Skills from `tmustier/claude-to-pi`.
 
 If you want plan mode, todos, command approvals, sandboxing, background shells, CRM tools, or a different browser workflow, ask Pi first. There may already be a maintained extension; if not, Pi can usually build a focused one.
+
+### Compaction defaults
+
+This setup includes a local `model-compaction-trigger.ts` extension with two layers:
+
+- **Post-run compaction at `120,000` tokens** for Fable, Opus, Sonnet, and Codex models, using Pi's default `ctx.compact()` path after an agent run ends.
+- **Claude-only soft context compaction around `200,000` tokens** during long tool loops, keeping Pi's `keepRecentTokens` value of `20,000` and sending the provider a virtual `compactionSummary + recent suffix` context before the next model call.
+
+The soft layer is configured by `soft-context-compaction.json` and is deliberately limited to Claude/Fable/Opus/Sonnet model patterns.
 
 ## Good optional additions
 

@@ -8,3 +8,4 @@
 - Modernized `/onboard`, `/machine-doctor`, startup tips, tmux skill socket naming, and update instructions.
 - Removed committed `.pi/extensions` duplicates that could conflict with globally installed extensions when opening this repo in Pi.
 - Clarified Pi skill loading during bootstrap and cleaned up stale `claude-to-pi/skills/...` package entries so repo-owned Agent Skills are not loaded as extensions. Thanks @just4masha for the original fix and `todo-audit` skill discovery cleanup in PR #2.
+- Added model/context compaction safeguards: post-run default compaction at 120k tokens plus Claude-only soft context compaction around 200k tokens during long tool loops.

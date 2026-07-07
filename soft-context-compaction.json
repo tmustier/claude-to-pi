@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "thresholdTokens": 200000,
+  "keepRecentTokens": 20000,
+  "modelPatterns": [
+    "anthropic/claude-fable-*",
+    "anthropic/claude-opus-*",
+    "anthropic/claude-sonnet-*",
+    "*/claude-fable-*",
+    "*/claude-opus-*",
+    "*/claude-sonnet-*"
+  ],
+  "status": true,
+  "notify": true
+}
