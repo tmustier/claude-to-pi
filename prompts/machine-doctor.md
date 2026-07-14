@@ -28,7 +28,7 @@ Goals:
    - If packages/resources look missing or stale, suggest and/or run `pi update`
 4. Verify model setup:
    - Check `enabledModels` / scoped model defaults
-   - Flag stale model names such as `gpt-5.4`, `gpt-5`, `o3`, `o1`, Claude 3.x, or older Claude 4.x aliases
+   - Flag stale model names such as `gpt-5.5`, `gpt-5.4`, `gpt-5`, `o3`, `o1`, Claude 3.x, or older Claude 4.x aliases
    - If auth is missing for a configured provider, recommend `/login` rather than silently changing models
 5. Verify common app installs where relevant:
    - Google Chrome, terminal app, Microsoft Office apps if document workflows matter

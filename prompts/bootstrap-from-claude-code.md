@@ -73,7 +73,7 @@ The fact that they're running this prompt inside Pi and getting a response means
 
 ### 4. OpenAI/Codex (optional)
 
-Claude Code does NOT store OpenAI credentials — only Anthropic. If the user wants to use `openai-codex/gpt-5.5` from this setup's scoped model list, they'll need to log in to OpenAI/Codex separately:
+Claude Code does NOT store OpenAI credentials — only Anthropic. If the user wants to use `openai-codex/gpt-5.6-sol` from this setup's scoped model list, they'll need to log in to OpenAI/Codex separately:
 
 Tell them: "You're now authenticated with Claude (Anthropic). If you also want access to the OpenAI Codex model, run `/login` and connect your OpenAI/ChatGPT/Codex account. This is optional — you can use Pi with just Claude models."
 

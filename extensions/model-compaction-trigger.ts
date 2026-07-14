@@ -76,7 +76,7 @@ const POST_RUN_THRESHOLDS_BY_MODEL: Record<string, number> = {
 	"anthropic/claude-fable-5": 120_000,
 	"anthropic/claude-opus-4-8": 120_000,
 	"anthropic/claude-sonnet-4-6": 120_000,
-	"openai-codex/gpt-5.5": 120_000,
+	"openai-codex/gpt-5.6-sol": 120_000,
 	"openai-codex/gpt-5.3-codex": 120_000,
 };
 

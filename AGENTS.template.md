@@ -22,50 +22,60 @@ Model names change quickly. Prefer current models and verify with `/model`, `/sc
 ### Current defaults in this setup
 
 1. **`anthropic/claude-opus-4-8`** — default for this migration kit because Claude Code users can usually reuse their Anthropic login immediately. Good for writing, judgement, UX/product taste, and general assistance.
-2. **`openai-codex/gpt-5.5`** — preferred for harder technical work requiring precision, code review, debugging, data analysis, migrations, or security/infra confidence.
+2. **`openai-codex/gpt-5.6-sol`** — preferred for harder technical work requiring precision, code review, debugging, data analysis, migrations, or security/infra confidence.
 
 ### Operating rules
 
-- Do not recommend or copy forward stale aliases such as `gpt-5.4`, `gpt-5`, `o3`, `o1`, Claude 3.x, or older Claude 4.x aliases when current models are available.
+- Do not recommend or copy forward stale aliases such as `gpt-5.5`, `gpt-5.4`, `gpt-5`, `o3`, `o1`, Claude 3.x, or older Claude 4.x aliases when current models are available.
 - If a model configured here is unavailable, help the user run `/login`, `/model`, or `/scoped-models` rather than silently falling back to an old model.
 - For simple or cost-sensitive work, ask whether the user wants to add a faster model to `/scoped-models`.
 
 ## Git
 
-The user finds git intimidating but does need version control. **Handle git proactively so they don't have to think about it:**
+The user finds git intimidating but does need version control. **Handle git proactively so they do not have to think about it:**
 
-- **Commit and push frequently** after meaningful changes.
-- **Fast-forward repos automatically** before starting work (`git pull --ff-only` or equivalent). If there are conflicts, explain what happened in plain language.
-- **Write descriptive commit messages** — e.g. "Add supplier contact fields to deal doc", not "update files".
-- **Never leave the user on a detached HEAD or dirty working tree**. If you notice this state, fix it or explain exactly what remains.
-- **Handle branches simply**. Prefer small PRs for shared repos. Clean up stale branches/worktrees when done.
-- **Explain git status when relevant**. If the user asks whether work is saved, check `git status` and `git log`.
+- Inspect `git status` before changing anything. Fetch the latest upstream state, but never pull or rebase over a dirty working tree.
+- Before editing a shared repository, create a fresh task-specific worktree or fresh clone. Do not switch branches in an existing shared checkout because another user or agent may be using it.
+- Work and commit inside the isolated checkout. When resuming an existing task worktree, update or fast-forward it before continuing.
+- Commit and push meaningful changes with a descriptive message, for example "Add supplier contact fields to deal doc" rather than "update files".
+- Prefer small PRs for shared repositories. Follow stricter repository-level instructions when present.
+- Never leave behind conflicts or uncommitted changes created by your work. Remove the task worktree after its changes are safely pushed or merged and it is no longer needed.
+- If the user asks whether work is saved, check `git status` and `git log` and explain the result in plain language.
 
-## Outbound communication guardrail
+## Outbound communication
 
-**Never send an outbound message (email, chat, etc.) without explicit user approval.**
+### Email approval gate
 
-Process:
+A request to write, draft, prepare or improve an email does not authorize sending it.
 
-1. **Draft first** — show recipients, subject/body, and attachments.
-2. **Wait for explicit approval** — e.g. "send it", "go ahead", "send".
-3. **Use `send-gate`** for outbound commands. Do not call send commands directly.
-4. **Grace period** — `send-gate` gives a 60-second abort window.
+1. Show the user the full draft, including recipients, subject, body and attachments.
+2. Wait for explicit approval such as “send it”, “go ahead” or “send”.
+3. Send only the approved version. Ask again only if the recipients, body or attachments change materially.
+4. Route every email send, reply, forward or scheduled send through `~/.local/bin/send-gate`. Never invoke an email send command directly. If a tool-native send action cannot run through `send-gate`, use a supported gated command-line path instead.
 
-## Interactive and long-running commands
+`send-gate` gives a 60-second abort window. Set the bash tool's timeout to at least 90 seconds when using it.
 
-**Never run interactive commands or long-lived processes directly in bash.** They can hang the agent.
+### Other channels
 
-The `non-interactive-bash` extension prevents the most common hangs by injecting env vars such as `GIT_EDITOR`, `PAGER`, `GIT_TERMINAL_PROMPT`, and `HOMEBREW_NO_AUTO_UPDATE` into bash calls.
+- Internal Slack messages and normal replies in the current assistant thread do not require prior approval or `send-gate`.
+- In a Slack channel or direct message with external participants, post only when the user explicitly asks to send the exact message or approves a draft you have shown them.
+- Send iMessages only when the user directly requests it or an approved workflow explicitly authorizes it. iMessage does not require `send-gate`.
+- Calendar events and invitations do not require `send-gate`. Follow the user's request and verify the guests, time and event details before creating them.
 
-What you still need to handle manually:
+## Browser and process handling
 
-- **Use the `tmux` skill** for truly interactive work — Python REPLs, debuggers, database consoles, or complex interactive git operations.
-- **Launch GUI apps with `open -a "App Name"`**. Do not run app binaries directly.
-- **Set timeouts on network commands** such as `curl`, package installs, or remote API calls.
-- **Server processes:** if you must start one, use a detached process (`nohup ... &` / `disown`) and verify with a health check.
-- **Browser cookie extraction:** prefer supported APIs/MCP/OAuth. Use the `chrome-cookies` skill only when browser-session cookies are explicitly needed.
-- **Clean up after yourself** — kill tmux sessions, background processes, and temporary worktrees when done.
+Keep browser and app automation in the background unless the user explicitly asks to see or interact with it.
+
+The `non-interactive-bash` extension prevents common hangs by injecting environment variables such as `GIT_EDITOR`, `PAGER`, `GIT_TERMINAL_PROMPT`, and `HOMEBREW_NO_AUTO_UPDATE` into bash calls.
+
+- For websites, use `agent-browser` in its default headless mode. Use `--session <name>` when state must persist and close the session when finished. Use `--headed` only when the user needs a visible browser or must complete a manual interaction.
+- For supported native app operations, use signed Computer Use tools when available rather than launching app binaries from bash.
+- When the user explicitly asks to open a PDF, file or app for them, use macOS Launch Services (`open <path>` or `open -a "App Name"`).
+- Never run a long-lived GUI app binary directly from bash.
+- Set the bash tool's timeout parameter on network calls and commands that could block. Do not rely on an external `timeout` command.
+- Start necessary servers detached and verify them with a health check. Use the `tmux` skill for processes that need ongoing observation or interaction.
+- Prefer supported APIs, MCP or OAuth. Use the `chrome-cookies` skill only when browser-session cookies are explicitly needed.
+- Clean up tmux sessions, browser sessions, background processes, and temporary worktrees when done.
 
 ## Pi-specific guidance
 
@@ -75,4 +85,4 @@ What you still need to handle manually:
 - Use `/tree` for fine-grained context control; branch rather than letting a messy thread grow forever.
 - Use `/name <name>` for important sessions so `/resume` is easier later.
 
-<!-- Add your team-specific sections below: MCP servers, project repos, tool access, etc. -->
+<!-- Add your team-specific sections below: source-of-truth systems, project repos, and tool access. -->

@@ -77,7 +77,7 @@ Explain model scope in plain language:
 - `Ctrl+P` cycles through the scoped model list.
 - `/scoped-models` lets them choose which models appear and in what order.
 - This setup defaults to `anthropic/claude-opus-4-8` so Claude Code users can usually start with their copied Anthropic login.
-- `openai-codex/gpt-5.5` is included as the precision/code-review model once OpenAI/Codex auth is connected.
+- `openai-codex/gpt-5.6-sol` is included as the precision/code-review model once OpenAI/Codex auth is connected.
 
 If OpenAI/Codex is not connected, tell them they can run `/login` later.
 
