@@ -133,8 +133,10 @@ mkdir -p ~/.pi/agent
 # Settings: current scoped models, compaction defaults, and a small default package set
 cp ~/claude-to-pi/settings.template.json ~/.pi/agent/settings.json
 
-# Soft context compaction config: Claude models compact gently around 200k tokens mid-loop
-cp ~/claude-to-pi/soft-context-compaction.json ~/.pi/agent/soft-context-compaction.json
+# Persisted native compaction after tool-bearing turns cross 200,000 estimated tokens
+if [ ! -f ~/.pi/agent/auto-compact.json ]; then
+  cp ~/claude-to-pi/auto-compact.json ~/.pi/agent/auto-compact.json
+fi
 
 # AGENTS.md: your standing instructions for Pi
 cp ~/claude-to-pi/AGENTS.template.md ~/.pi/agent/AGENTS.md
@@ -193,10 +195,18 @@ cp ~/claude-to-pi/agents/*.md ~/.pi/agent/agents/
 mkdir -p ~/.pi/agent/prompts
 cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
 
-# Extensions, including:
-# - model-compaction-trigger.ts: post-run compaction at 120k, plus Claude-only soft context compaction at 200k during long tool loops
+# Extensions
 mkdir -p ~/.pi/agent/extensions
 cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
+
+# Disable the superseded local compaction extension and config while preserving backups.
+STAMP="$(date +%Y%m%d%H%M%S)"
+if [ -f ~/.pi/agent/extensions/model-compaction-trigger.ts ]; then
+  mv ~/.pi/agent/extensions/model-compaction-trigger.ts ~/.pi/agent/extensions/model-compaction-trigger.ts.disabled-"$STAMP"
+fi
+if [ -f ~/.pi/agent/soft-context-compaction.json ]; then
+  mv ~/.pi/agent/soft-context-compaction.json ~/.pi/agent/soft-context-compaction.json.disabled-"$STAMP"
+fi
 
 # send-gate: outbound email safety net
 mkdir -p ~/.local/bin
@@ -224,13 +234,13 @@ If the user wants browser automation via `surf-cli`, finish that later from `/on
 
 ## Step 8: Pull Pi packages
 
-This downloads the packages configured in `settings.json`:
+This downloads the packages configured in `settings.json`, including `tmustier/pi-auto-compact@v0.1.1`:
 
 ```bash
 pi update
 ```
 
-This may take a few minutes. Let the user know.
+This may take a few minutes. Let the user know. Run `/reload`, then `/auto-compact`, inside Pi to confirm the 200,000-token default policy.
 
 ## Step 9: Hand off to Pi
 

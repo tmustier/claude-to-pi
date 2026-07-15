@@ -72,6 +72,8 @@ mkdir -p ~/.pi/agent
 cp ~/claude-to-pi/settings.template.json ~/.pi/agent/settings.json
 ```
 
+Check `~/.pi/agent/auto-compact.json`. If it is missing, copy `~/claude-to-pi/auto-compact.json` there. Preserve an existing valid policy unless the user asks to reset it to the 200,000-token default.
+
 Explain model scope in plain language:
 
 - `Ctrl+P` cycles through the scoped model list.
@@ -112,10 +114,15 @@ import json, pathlib
 settings_path = pathlib.Path.home() / '.pi' / 'agent' / 'settings.json'
 settings = json.loads(settings_path.read_text())
 
+auto_compact = 'git:github.com/tmustier/pi-auto-compact@v0.1.1'
 settings['packages'] = [
-    pkg for pkg in settings.get('packages', [])
+    auto_compact if isinstance(pkg, str) and 'tmustier/pi-auto-compact' in pkg else pkg
+    for pkg in settings.get('packages', [])
     if not (isinstance(pkg, str) and 'claude-to-pi/skills/' in pkg)
 ]
+
+if auto_compact not in settings['packages']:
+    settings['packages'].append(auto_compact)
 
 skills = settings.setdefault('skills', [])
 for candidate in ['~/.claude/skills', '~/.codex/skills']:
@@ -137,6 +144,15 @@ cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
 cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
 cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate
 chmod +x ~/.local/bin/send-gate
+
+# Disable the superseded compaction implementation and preserve timestamped backups.
+STAMP="$(date +%Y%m%d%H%M%S)"
+if [ -f ~/.pi/agent/extensions/model-compaction-trigger.ts ]; then
+  mv ~/.pi/agent/extensions/model-compaction-trigger.ts ~/.pi/agent/extensions/model-compaction-trigger.ts.disabled-"$STAMP"
+fi
+if [ -f ~/.pi/agent/soft-context-compaction.json ]; then
+  mv ~/.pi/agent/soft-context-compaction.json ~/.pi/agent/soft-context-compaction.json.disabled-"$STAMP"
+fi
 ```
 
 ## Step 6: Pull packages
@@ -147,7 +163,7 @@ Run:
 pi update
 ```
 
-Explain: this updates Pi and downloads the packages listed in `settings.json`. It may take a few minutes.
+Explain: this updates Pi and downloads the packages listed in `settings.json`, including `tmustier/pi-auto-compact@v0.1.1`. It may take a few minutes. Run `/reload`, then `/auto-compact`, to confirm the 200,000-token default policy.
 
 ## Step 7: Browser automation
 

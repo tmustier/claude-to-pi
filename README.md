@@ -55,7 +55,7 @@ This repo aims for useful defaults without turning Pi into a giant pre-bundled d
 | --- | --- |
 | **Settings** | Current Anthropic/OpenAI-Codex scoped models, xhigh thinking, Pi compaction defaults, and a small default package set. |
 | **AGENTS.md** | Plain-language working style, current model policy, git hygiene, send-gate, and non-interactive command guidance. |
-| **Extensions** | `/open`, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, `/update`, and model/context compaction safeguards. |
+| **Extensions** | `/open`, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, `/update`, and persisted native auto-compaction. |
 | **Prompts** | `/onboard`, `/machine-doctor`, `/auto-pr`, `/bootstrap-from-claude-code`. |
 | **Subagents** | PR reviewer and general reviewer agent definitions. |
 | **Scripts** | `send-gate` — a 60s abort window before outbound email sends. |
@@ -67,6 +67,7 @@ The template keeps package defaults deliberately small:
 
 - `pi-subagents` — chains, parallel/background agents, and dynamic workflows.
 - `pi-mcp-adapter` — MCP support when you decide you need it.
+- `pi-auto-compact` — persisted native compaction after tool-bearing turns cross 200,000 estimated tokens.
 - `pi-web-access` — web search, page fetching, YouTube/video handling.
 - `agent-browser` and `surf-cli` — browser automation options.
 - Anthropic document Agent Skills for `docx`, `pdf`, and `xlsx`.
@@ -76,12 +77,9 @@ If you want plan mode, todos, command approvals, sandboxing, background shells, 
 
 ### Compaction defaults
 
-This setup includes a local `model-compaction-trigger.ts` extension with two layers:
+This setup installs [`tmustier/pi-auto-compact`](https://github.com/tmustier/pi-auto-compact) with a default threshold of 200,000 estimated tokens. After a tool-bearing turn crosses the threshold, the extension persists Pi's native compaction and continues the active request without adding a user continuation message.
 
-- **Post-run compaction at `120,000` tokens** for Fable, Opus, Sonnet, and Codex models, using Pi's default `ctx.compact()` path after an agent run ends.
-- **Claude-only soft context compaction around `200,000` tokens** during long tool loops, keeping Pi's `keepRecentTokens` value of `20,000` and sending the provider a virtual `compactionSummary + recent suffix` context before the next model call.
-
-The soft layer is configured by `soft-context-compaction.json` and is deliberately limited to Claude/Fable/Opus/Sonnet model patterns.
+The policy lives in `~/.pi/agent/auto-compact.json`. The previous local post-run and soft-context implementation remains in this repository with a `.disabled` suffix for reference. The setup does not copy or load it.
 
 ## Good optional additions
 
