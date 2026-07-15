@@ -16,9 +16,9 @@ function resolveScriptPath(): string {
   const bundled = resolve(dirname(fileURLToPath(import.meta.url)), "..", "scripts", "papercut");
   const candidates = [
     process.env.PAPERCUT_BIN,
+    bundled,
     join(agentDir, "bin", "papercut"),
     join(homedir(), ".local", "bin", "papercut"),
-    bundled,
   ];
   return candidates.find((candidate): candidate is string => Boolean(candidate && existsSync(candidate))) ?? bundled;
 }
