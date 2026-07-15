@@ -8,6 +8,8 @@ import { Type, type Static } from "typebox";
 
 const TOOL_NAME = "papercut";
 const AUTO_SUBMIT_REPO: string | undefined = undefined;
+const CAPTURE_GUIDANCE = `## Pi papercut capture
+When you directly encounter a small, real tool, UI, or workflow friction, record it once with the papercut tool. Supply one or two sanitized sentences, short task/repo context, and the affected surface. Never include secrets, private/customer content, raw messages, transcripts, or unnecessary output; if sanitization is uncertain, skip it. Papercuts are not blockers or tracked work. The tool attaches operational session metadata without reading session content and stores captures locally unless the user explicitly submits them.`;
 
 function resolveScriptPath(): string {
   const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
@@ -59,6 +61,11 @@ async function piVersion(pi: ExtensionAPI, signal?: AbortSignal): Promise<string
 }
 
 export default function papercutExtension(pi: ExtensionAPI) {
+  pi.on("before_agent_start", (event) => {
+    if (event.systemPrompt.includes("with the `papercut` tool")) return;
+    return { systemPrompt: `${event.systemPrompt}\n\n${CAPTURE_GUIDANCE}` };
+  });
+
   pi.registerTool({
     name: TOOL_NAME,
     label: "Papercut",
