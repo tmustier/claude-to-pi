@@ -19,15 +19,19 @@ Goals:
    - `prompts/*.md`
    - `extensions/*.{ts,js}`
    - `scripts/send-gate` or `~/.local/bin/send-gate`
+   - `scripts/papercut` or `~/.local/bin/papercut`
 2. Verify key CLIs are installed and on PATH:
    - `brew`, `git`, `gh`, `jq`, `node`, `npm`, `python3`, `pi`
    - Optional but useful: `ffmpeg`, `yt-dlp`, `surf`
+   - If `send-gate` or `papercut` is missing or older than the active checkout copy, install it into `~/.local/bin/` and make it executable
+   - Verify `papercut resolve --json` and a sanitized `papercut --dry-run` succeed; do not append a real note during the audit
 3. Verify Pi package setup:
    - Read `~/.pi/agent/settings.json`
    - Check that the default package list is small and current: `pi-subagents`, `pi-mcp-adapter`, `tmustier/pi-auto-compact@v0.1.1`, `pi-web-access`, `agent-browser`, `surf-cli`, document skills, and `tmustier/claude-to-pi` skills
    - Confirm `~/.pi/agent/auto-compact.json` is valid and uses 200,000 tokens when the user has no intentional override
    - Flag an active `model-compaction-trigger.ts`, `soft-context-compaction.json`, or another proactive-compaction package as a potential duplicate trigger; preserve a timestamped backup when disabling it
    - If packages/resources look missing or stale, suggest and/or run `pi update`
+   - Confirm `AGENTS.md` contains the papercut safety policy and `prompts/papercuts-review.md` exists; preserve intentional customizations when repairing them
 4. Verify model setup:
    - Check `enabledModels` / scoped model defaults
    - Flag stale model names such as `gpt-5.5`, `gpt-5.4`, `gpt-5`, `o3`, `o1`, Claude 3.x, or older Claude 4.x aliases

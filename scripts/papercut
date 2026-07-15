@@ -1,0 +1,642 @@
+#!/usr/bin/env python3
+"""Append and review small, sanitized workflow-friction notes.
+
+This is deliberately a standalone local CLI: Pi agents can call it through the
+normal bash tool, while humans can use the same command from a shell.
+"""
+
+from __future__ import annotations
+
+import argparse
+import fcntl
+import json
+import os
+import re
+import stat
+import subprocess
+import sys
+from collections import Counter
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Sequence
+
+GLOBAL_FILENAME = "PAPERCUTS.md"
+LOCAL_FILENAME = "PAPERCUTS.md"
+MAX_NOTE_CHARS = 600
+MAX_METADATA_CHARS = 240
+MAX_REVIEW_FILE_BYTES = 10 * 1024 * 1024
+FILE_HEADER = """# Papercuts
+
+Append-only observations of small, real workflow friction. This is not a blocker log, work log, issue tracker, accomplishment list, or secret store.
+
+"""
+
+# Deliberately high-confidence patterns. The CLI rejects rather than redacts an
+# attempted append so a secret never reaches either papercuts file.
+SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "private key",
+        re.compile(r"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----", re.IGNORECASE),
+    ),
+    (
+        "OpenAI or Anthropic API key",
+        re.compile(r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{16,}\b"),
+    ),
+    (
+        "GitHub token",
+        re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b"),
+    ),
+    (
+        "Slack token",
+        re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{12,}\b"),
+    ),
+    (
+        "AWS access key",
+        re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+    ),
+    (
+        "Google API key",
+        re.compile(r"\bAIza[A-Za-z0-9_-]{30,}\b"),
+    ),
+    (
+        "Stripe secret key",
+        re.compile(r"\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{12,}\b"),
+    ),
+    (
+        "npm token",
+        re.compile(r"\bnpm_[A-Za-z0-9]{20,}\b"),
+    ),
+    (
+        "JWT",
+        re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"),
+    ),
+    (
+        "bearer credential",
+        re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}", re.IGNORECASE),
+    ),
+    (
+        "credential embedded in URL",
+        re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s/:@]+:[^\s/@]+@", re.IGNORECASE),
+    ),
+)
+
+CREDENTIAL_ASSIGNMENT_RE = re.compile(
+    r"\b(?:api[_ -]?key|access[_ -]?token|auth[_ -]?token|password|passwd|secret|"
+    r"client[_ -]?secret|session[_ -]?(?:id|token)|cookie)\b\s*(?:=|:|\bis\b)\s*"
+    r"[\"']?(?P<value>[^\s,;\"']{8,})",
+    re.IGNORECASE,
+)
+EMAIL_RE = re.compile(r"(?<![\w.+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}(?![\w.-])", re.IGNORECASE)
+CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")
+SAFE_PLACEHOLDERS = {
+    "redacted",
+    "<redacted>",
+    "[redacted]",
+    "***",
+    "xxxxxxxx",
+    "placeholder",
+    "example",
+}
+COMMON_ABBREVIATIONS = ("e.g.", "i.e.", "etc.", "vs.", "Mr.", "Ms.", "Dr.")
+ENTRY_RE = re.compile(
+    r"^## (?P<timestamp>[^\n]+)\n"
+    r"- Model: `(?P<model>[^\n]*)`\n"
+    r"- Context: `(?P<context>[^\n]*)`\n"
+    r"- Friction: (?P<note>[^\n]*)$",
+    re.MULTILINE,
+)
+
+
+class PapercutError(Exception):
+    """A safe, user-facing failure."""
+
+
+@dataclass(frozen=True)
+class Resolution:
+    target: Path
+    scope: str
+    reason: str
+    repo_root: Path | None = None
+
+
+@dataclass(frozen=True)
+class Entry:
+    timestamp: str
+    model: str
+    context: str
+    note: str
+    source: str
+    scope: str
+
+
+def _agent_dir() -> Path:
+    configured = os.environ.get("PI_CODING_AGENT_DIR")
+    return Path(configured).expanduser().resolve() if configured else Path.home() / ".pi" / "agent"
+
+
+def _global_file() -> Path:
+    return _agent_dir() / GLOBAL_FILENAME
+
+
+def _display_path(path: Path) -> str:
+    try:
+        absolute = path.expanduser().absolute()
+        return f"~/{absolute.relative_to(Path.home().expanduser().absolute())}"
+    except (ValueError, OSError):
+        return str(path)
+
+
+def _normalize_text(value: str, *, label: str, max_chars: int) -> str:
+    if "\x00" in value:
+        raise PapercutError(f"{label} contains a NUL byte; nothing was written")
+    normalized = " ".join(value.split())
+    if not normalized:
+        raise PapercutError(f"{label} must not be empty; nothing was written")
+    if len(normalized) > max_chars:
+        raise PapercutError(
+            f"{label} is {len(normalized)} characters (maximum {max_chars}); nothing was written"
+        )
+    return normalized
+
+
+def _secret_kind(value: str) -> str | None:
+    for label, pattern in SECRET_PATTERNS:
+        if pattern.search(value):
+            return label
+
+    assignment = CREDENTIAL_ASSIGNMENT_RE.search(value)
+    if assignment:
+        candidate = assignment.group("value").strip().lower()
+        if candidate not in SAFE_PLACEHOLDERS:
+            return "credential-like assignment"
+
+    if EMAIL_RE.search(value):
+        return "email address or private contact data"
+
+    card = CARD_RE.search(value)
+    if card:
+        digits = re.sub(r"\D", "", card.group(0))
+        if 13 <= len(digits) <= 19:
+            return "payment-card-like number"
+    return None
+
+
+def _validate_no_sensitive_data(*values: str) -> None:
+    for value in values:
+        kind = _secret_kind(value)
+        if kind:
+            raise PapercutError(
+                f"possible {kind} detected; nothing was written. Sanitize the note and retry"
+            )
+
+
+def _sentence_count(note: str) -> int:
+    scrubbed = re.sub(r"https?://\S+", "URL", note)
+    for abbreviation in COMMON_ABBREVIATIONS:
+        scrubbed = scrubbed.replace(abbreviation, abbreviation.replace(".", "∯"))
+    endings = re.findall(r"[.!?]+(?:[\"')\]]*)?(?=\s+|$)", scrubbed)
+    return max(1, len(endings))
+
+
+def _git_root(cwd: Path) -> Path | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(cwd), "rev-parse", "--show-toplevel"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    output = result.stdout.strip()
+    return Path(output).resolve() if output else None
+
+
+def _assert_safe_existing_target(path: Path) -> None:
+    if os.path.lexists(path) and path.is_symlink():
+        raise PapercutError(f"refusing symlink target {_display_path(path)}; nothing was written")
+    if path.exists() and not path.is_file():
+        raise PapercutError(f"target {_display_path(path)} is not a regular file; nothing was written")
+
+
+def _nearest_local_file(cwd: Path, repo_root: Path) -> Path | None:
+    current = cwd
+    while True:
+        candidate = current / LOCAL_FILENAME
+        if os.path.lexists(candidate):
+            _assert_safe_existing_target(candidate)
+            return candidate
+        if current == repo_root:
+            return None
+        parent = current.parent
+        if parent == current or repo_root not in (parent, *parent.parents):
+            return None
+        current = parent
+
+
+def _resolve(cwd: Path, scope: str) -> Resolution:
+    cwd = cwd.expanduser().resolve()
+    if not cwd.is_dir():
+        raise PapercutError(f"cwd is not a directory: {cwd}")
+
+    if scope == "global":
+        target = _global_file()
+        _assert_safe_existing_target(target)
+        return Resolution(target, "global", "explicit-global")
+
+    repo_root = _git_root(cwd)
+    if scope == "local" and repo_root is None:
+        raise PapercutError("--local requires a Git worktree; nothing was written")
+
+    if repo_root is not None:
+        local = _nearest_local_file(cwd, repo_root)
+        if local is not None:
+            reason = "explicit-local-existing" if scope == "local" else "nearest-local-override"
+            return Resolution(local, "local", reason, repo_root)
+        if scope == "local":
+            target = repo_root / LOCAL_FILENAME
+            _assert_safe_existing_target(target)
+            return Resolution(target, "local", "explicit-local-create-at-repo-root", repo_root)
+
+    target = _global_file()
+    _assert_safe_existing_target(target)
+    reason = "no-local-file" if repo_root is not None else "outside-git-worktree"
+    return Resolution(target, "global", reason, repo_root)
+
+
+def _default_context(cwd: Path) -> str:
+    cwd = cwd.resolve()
+    root = _git_root(cwd)
+    if root is None:
+        return f"cwd:{_display_path(cwd)}"
+    try:
+        relative = cwd.relative_to(root)
+    except ValueError:
+        relative = Path(".")
+    suffix = "" if str(relative) == "." else f"/{relative.as_posix()}"
+    return f"repo:{root.name}{suffix}"
+
+
+def _current_model(explicit: str | None) -> str:
+    if explicit:
+        return explicit
+    for name in ("PAPERCUT_MODEL", "PI_MODEL", "CODEX_MODEL", "CLAUDE_MODEL"):
+        value = os.environ.get(name)
+        if value:
+            return value
+    return "unknown"
+
+
+def _escape_code(value: str) -> str:
+    return value.replace("`", "\\`")
+
+
+def _unescape_code(value: str) -> str:
+    return value.replace("\\`", "`")
+
+
+def _entry_markdown(timestamp: str, model: str, context: str, note: str) -> str:
+    return (
+        f"## {timestamp}\n"
+        f"- Model: `{_escape_code(model)}`\n"
+        f"- Context: `{_escape_code(context)}`\n"
+        f"- Friction: {note}\n\n"
+    )
+
+
+def _append_locked(path: Path, entry: str, *, mode: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    _assert_safe_existing_target(path)
+
+    flags = os.O_RDWR | os.O_APPEND | os.O_CREAT
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+
+    try:
+        fd = os.open(path, flags, mode)
+    except OSError as error:
+        raise PapercutError(f"could not open {_display_path(path)} safely: {error.strerror}") from error
+
+    try:
+        with os.fdopen(fd, "r+b", closefd=True) as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            info = os.fstat(handle.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise PapercutError(f"target {_display_path(path)} is not a regular file; nothing was written")
+
+            if info.st_size == 0:
+                payload = FILE_HEADER.encode("utf-8") + entry.encode("utf-8")
+            else:
+                handle.seek(-1, os.SEEK_END)
+                separator = b"" if handle.read(1) == b"\n" else b"\n"
+                payload = separator + entry.encode("utf-8")
+
+            handle.seek(0, os.SEEK_END)
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    except PapercutError:
+        raise
+    except OSError as error:
+        raise PapercutError(f"could not append to {_display_path(path)}: {error.strerror}") from error
+
+
+def _read_locked(path: Path) -> str:
+    _assert_safe_existing_target(path)
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        fd = os.open(path, flags)
+    except FileNotFoundError:
+        return ""
+    except OSError as error:
+        raise PapercutError(f"could not open {_display_path(path)} safely: {error.strerror}") from error
+
+    try:
+        with os.fdopen(fd, "rb", closefd=True) as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_SH)
+            payload = handle.read(MAX_REVIEW_FILE_BYTES + 1)
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    except OSError as error:
+        raise PapercutError(f"could not read {_display_path(path)} safely: {error.strerror}") from error
+
+    if len(payload) > MAX_REVIEW_FILE_BYTES:
+        raise PapercutError(
+            f"refusing to review {_display_path(path)} because it exceeds {MAX_REVIEW_FILE_BYTES} bytes"
+        )
+    try:
+        return payload.decode("utf-8")
+    except UnicodeError as error:
+        raise PapercutError(f"could not decode {_display_path(path)} as UTF-8") from error
+
+
+def _parse_entries(path: Path, scope: str) -> list[Entry]:
+    content = _read_locked(path)
+    if not content:
+        return []
+
+    entries: list[Entry] = []
+    for match in ENTRY_RE.finditer(content):
+        timestamp = match.group("timestamp")
+        model = _unescape_code(match.group("model"))
+        context = _unescape_code(match.group("context"))
+        note = match.group("note")
+        if _secret_kind(" ".join((model, context, note))):
+            model = "[redacted]"
+            context = "[redacted]"
+            note = "[redacted: possible sensitive data in stored entry]"
+        entries.append(
+            Entry(
+                timestamp=timestamp,
+                model=model,
+                context=context,
+                note=note,
+                source=_display_path(path),
+                scope=scope,
+            )
+        )
+    return entries
+
+
+def _timestamp_sort_key(value: str) -> tuple[int, str]:
+    try:
+        parsed = datetime.fromisoformat(value)
+        return (1, parsed.astimezone().isoformat())
+    except (ValueError, TypeError):
+        return (0, value)
+
+
+def _after_since(entry: Entry, since: str | None) -> bool:
+    if since is None:
+        return True
+    try:
+        cutoff = datetime.fromisoformat(since)
+        observed = datetime.fromisoformat(entry.timestamp)
+        if cutoff.tzinfo is None and observed.tzinfo is not None:
+            return observed.date() >= cutoff.date()
+        if cutoff.tzinfo is not None and observed.tzinfo is None:
+            return observed.date() >= cutoff.date()
+        return observed >= cutoff
+    except ValueError as error:
+        raise PapercutError(f"invalid --since value {since!r}; use YYYY-MM-DD or an ISO-8601 timestamp") from error
+
+
+def _scope_from_args(args: argparse.Namespace) -> str:
+    if getattr(args, "global_scope", False):
+        return "global"
+    if getattr(args, "local_scope", False):
+        return "local"
+    return "auto"
+
+
+def _cmd_add(args: argparse.Namespace) -> int:
+    cwd = Path(args.cwd)
+    note = _normalize_text(" ".join(args.note), label="note", max_chars=MAX_NOTE_CHARS)
+    if _sentence_count(note) > 2:
+        raise PapercutError("note must be one or two sentences; split longer observations into separate papercuts")
+
+    model = _normalize_text(_current_model(args.model), label="model", max_chars=MAX_METADATA_CHARS)
+    context = _normalize_text(
+        args.context if args.context else _default_context(cwd),
+        label="context",
+        max_chars=MAX_METADATA_CHARS,
+    )
+    _validate_no_sensitive_data(note, model, context)
+
+    resolution = _resolve(cwd, _scope_from_args(args))
+    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
+    entry = _entry_markdown(timestamp, model, context, note)
+
+    if not args.dry_run:
+        mode = 0o600 if resolution.scope == "global" else 0o644
+        _append_locked(resolution.target, entry, mode=mode)
+
+    result = {
+        "status": "dry-run" if args.dry_run else "recorded",
+        "target": str(resolution.target),
+        "displayTarget": _display_path(resolution.target),
+        "scope": resolution.scope,
+        "reason": resolution.reason,
+        "timestamp": timestamp,
+        "model": model,
+        "context": context,
+    }
+    if args.json:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        verb = "Would record" if args.dry_run else "Recorded"
+        print(f"{verb} papercut -> {result['displayTarget']} ({resolution.reason})")
+    return 0
+
+
+def _cmd_resolve(args: argparse.Namespace) -> int:
+    resolution = _resolve(Path(args.cwd), _scope_from_args(args))
+    result = {
+        "target": str(resolution.target),
+        "displayTarget": _display_path(resolution.target),
+        "scope": resolution.scope,
+        "reason": resolution.reason,
+        "exists": resolution.target.exists(),
+        "repoRoot": str(resolution.repo_root) if resolution.repo_root else None,
+    }
+    if args.json:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        print(result["displayTarget"])
+        print(f"scope={result['scope']} reason={result['reason']} exists={str(result['exists']).lower()}")
+    return 0
+
+
+def _review_sources(cwd: Path, args: argparse.Namespace) -> list[tuple[Path, str]]:
+    if args.all_scopes:
+        sources: list[tuple[Path, str]] = [(_global_file(), "global")]
+        repo_root = _git_root(cwd.resolve())
+        if repo_root is not None:
+            local = _nearest_local_file(cwd.resolve(), repo_root)
+            if local is not None and local != sources[0][0]:
+                sources.append((local, "local"))
+        return sources
+
+    resolution = _resolve(cwd, _scope_from_args(args))
+    return [(resolution.target, resolution.scope)]
+
+
+def _cmd_review(args: argparse.Namespace) -> int:
+    cwd = Path(args.cwd).expanduser().resolve()
+    sources = _review_sources(cwd, args)
+    entries: list[Entry] = []
+    for path, scope in sources:
+        entries.extend(_parse_entries(path, scope))
+    entries = [entry for entry in entries if _after_since(entry, args.since)]
+    entries.sort(key=lambda entry: _timestamp_sort_key(entry.timestamp), reverse=True)
+    total = len(entries)
+    shown = entries[: args.limit]
+
+    if args.json:
+        output = {
+            "sources": [
+                {"path": str(path), "displayPath": _display_path(path), "scope": scope, "exists": path.exists()}
+                for path, scope in sources
+            ],
+            "matched": total,
+            "shown": len(shown),
+            "entries": [asdict(entry) for entry in shown],
+        }
+        print(json.dumps(output, indent=2, sort_keys=True))
+        return 0
+
+    print("# Papercut review")
+    print()
+    print("Explicit one-off review bundle; no automatic session mining was run.")
+    print(f"Sources: {', '.join(_display_path(path) for path, _ in sources)}")
+    print(f"Matched: {total}; showing newest: {len(shown)}")
+    if shown:
+        models = Counter(entry.model for entry in shown)
+        contexts = Counter(entry.context for entry in shown)
+        print("Models: " + ", ".join(f"{name} ({count})" for name, count in models.most_common()))
+        print("Contexts: " + ", ".join(f"{name} ({count})" for name, count in contexts.most_common(8)))
+        print()
+        print("## Recent friction")
+        print()
+        for entry in shown:
+            print(
+                f"- {entry.timestamp} · {entry.scope} · `{entry.model}` · `{entry.context}` · "
+                f"{entry.note} _(source: {entry.source})_"
+            )
+    else:
+        print()
+        print("No structured papercut entries matched.")
+    return 0
+
+
+def _add_scope_flags(parser: argparse.ArgumentParser, *, include_all: bool = False) -> None:
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--global", dest="global_scope", action="store_true", help="use the global papercuts file")
+    group.add_argument(
+        "--local",
+        dest="local_scope",
+        action="store_true",
+        help="use/create the nearest repo-local papercuts file",
+    )
+    if include_all:
+        group.add_argument(
+            "--all",
+            dest="all_scopes",
+            action="store_true",
+            help="review the global file plus the effective nearest local override",
+        )
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="papercut",
+        description="Record small, real workflow friction without turning it into an issue tracker.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    add = subparsers.add_parser("add", help="append a one- or two-sentence papercut")
+    _add_scope_flags(add)
+    add.add_argument("--model", help="current provider/model (falls back to known model environment variables)")
+    add.add_argument("--context", help="short sanitized task/repo context (defaults to cwd/repo)")
+    add.add_argument("--cwd", default=os.getcwd(), help=argparse.SUPPRESS)
+    add.add_argument("--dry-run", action="store_true", help="show resolution without writing")
+    add.add_argument("--json", action="store_true", help="emit machine-readable result metadata")
+    add.add_argument("note", nargs="+", help="one or two sanitized sentences")
+    add.set_defaults(func=_cmd_add)
+
+    resolve = subparsers.add_parser("resolve", help="show the file the current directory resolves to")
+    _add_scope_flags(resolve)
+    resolve.add_argument("--cwd", default=os.getcwd(), help="resolve as if run from this directory")
+    resolve.add_argument("--json", action="store_true", help="emit machine-readable resolution details")
+    resolve.set_defaults(func=_cmd_resolve)
+
+    review = subparsers.add_parser("review", help="build an on-demand review bundle from recorded friction")
+    _add_scope_flags(review, include_all=True)
+    review.add_argument("--cwd", default=os.getcwd(), help="review as if run from this directory")
+    review.add_argument("--limit", type=int, default=50, help="maximum newest entries to show (default: 50)")
+    review.add_argument("--since", help="only include entries on/after an ISO date or timestamp")
+    review.add_argument("--json", action="store_true", help="emit machine-readable entries")
+    review.set_defaults(func=_cmd_review)
+
+    return parser
+
+
+def _normalize_argv(argv: Sequence[str]) -> list[str]:
+    if not argv:
+        return []
+    commands = {"add", "resolve", "review"}
+    if argv[0] in commands or argv[0] in {"-h", "--help"}:
+        return list(argv)
+    return ["add", *argv]
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = _build_parser()
+    normalized = _normalize_argv(list(sys.argv[1:] if argv is None else argv))
+    if not normalized:
+        parser.print_help(sys.stderr)
+        return 2
+    try:
+        args = parser.parse_args(normalized)
+        if getattr(args, "limit", 1) < 1:
+            raise PapercutError("--limit must be at least 1")
+        return int(args.func(args))
+    except PapercutError as error:
+        print(f"papercut: {error}", file=sys.stderr)
+        return 2
+    except BrokenPipeError:
+        return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

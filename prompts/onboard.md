@@ -143,7 +143,8 @@ cp ~/claude-to-pi/agents/*.md ~/.pi/agent/agents/
 cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
 cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
 cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate
-chmod +x ~/.local/bin/send-gate
+cp ~/claude-to-pi/scripts/papercut ~/.local/bin/papercut
+chmod +x ~/.local/bin/send-gate ~/.local/bin/papercut
 
 # Disable the superseded compaction implementation and preserve timestamped backups.
 STAMP="$(date +%Y%m%d%H%M%S)"
@@ -154,6 +155,16 @@ if [ -f ~/.pi/agent/soft-context-compaction.json ]; then
   mv ~/.pi/agent/soft-context-compaction.json ~/.pi/agent/soft-context-compaction.json.disabled-"$STAMP"
 fi
 ```
+
+Verify the papercut helper without writing a real note:
+
+```bash
+command -v papercut
+papercut resolve --json
+papercut --dry-run -- "A safe setup verification note."
+```
+
+Explain that agents use it only for small, sanitized workflow friction; blockers and tracked work go through normal reporting. Review is never automatic—the user invokes `/papercuts-review` when wanted.
 
 ## Step 6: Pull packages
 
@@ -257,6 +268,7 @@ Give this tour:
 - **`/tree`** or **Esc twice while idle** opens the conversation tree for branch/fork/time-travel control.
 - **`/name <name>`** names a session so `/resume` is easier.
 - **`/reload`** hot-reloads extensions, skills, prompts, and context files.
+- **`/papercuts-review`** explicitly reviews small workflow snags recorded by the local helper; nothing mines sessions automatically.
 - **Pi can read its own docs** and can extend itself. If something is missing, ask it to check docs and add the lightest-weight solution.
 
 Ask whether they want to try a small real task now.

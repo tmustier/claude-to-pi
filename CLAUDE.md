@@ -208,11 +208,14 @@ if [ -f ~/.pi/agent/soft-context-compaction.json ]; then
   mv ~/.pi/agent/soft-context-compaction.json ~/.pi/agent/soft-context-compaction.json.disabled-"$STAMP"
 fi
 
-# send-gate: outbound email safety net
+# Local helpers: outbound email safety and append-only workflow-friction notes
 mkdir -p ~/.local/bin
 cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate
-chmod +x ~/.local/bin/send-gate
+cp ~/claude-to-pi/scripts/papercut ~/.local/bin/papercut
+chmod +x ~/.local/bin/send-gate ~/.local/bin/papercut
 ```
+
+`papercut` lets agents record small, sanitized workflow friction without interrupting the task. The copied `/papercuts-review` prompt only reviews those notes when the user explicitly invokes it.
 
 Make sure `~/.local/bin` is on PATH:
 

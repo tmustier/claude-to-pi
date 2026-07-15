@@ -56,9 +56,9 @@ This repo aims for useful defaults without turning Pi into a giant pre-bundled d
 | **Settings** | Current Anthropic/OpenAI-Codex scoped models, xhigh thinking, Pi compaction defaults, and a small default package set. |
 | **AGENTS.md** | Plain-language working style, current model policy, git hygiene, send-gate, and non-interactive command guidance. |
 | **Extensions** | `/open`, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, `/update`, and persisted native auto-compaction. |
-| **Prompts** | `/onboard`, `/machine-doctor`, `/auto-pr`, `/bootstrap-from-claude-code`. |
+| **Prompts** | `/onboard`, `/machine-doctor`, `/auto-pr`, `/bootstrap-from-claude-code`, `/papercuts-review`. |
 | **Subagents** | PR reviewer and general reviewer agent definitions. |
-| **Scripts** | `send-gate` — a 60s abort window before outbound email sends. |
+| **Scripts** | `send-gate` — a 60s abort window before outbound email sends; `papercut` — safe, append-only workflow-friction notes. |
 | **Skills** | `agent-friendly-design`, `chrome-cookies`, `customer-intel`, `tmux`, `todo-audit`, `unslop`. |
 
 ### Default packages
@@ -74,6 +74,12 @@ The template keeps package defaults deliberately small:
 - This repo's own Agent Skills from `tmustier/claude-to-pi`.
 
 If you want plan mode, todos, command approvals, sandboxing, background shells, CRM tools, or a different browser workflow, ask Pi first. There may already be a maintained extension; if not, Pi can usually build a focused one.
+
+### Papercut logging
+
+The setup installs `papercut`, a standalone Python CLI for recording small, directly observed tool, UI, or workflow friction without interrupting active work. It writes sanitized, two-sentence-max notes to the nearest repo-local `PAPERCUTS.md` when one exists, otherwise `~/.pi/agent/PAPERCUTS.md`.
+
+Review is deliberately manual: invoke `/papercuts-review` in Pi or run `papercut review --all`. The workflow does not install a hook, recurring job, or automatic session miner, and it does not replace blocker reporting, work logs, or issue tracking.
 
 ### Compaction defaults
 
