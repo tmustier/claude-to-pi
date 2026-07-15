@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Added the `papercut` CLI, explicit `/papercuts-review` prompt, agent safety policy, setup/doctor integration, and tests for sanitized append-only workflow-friction notes.
+- Added the `papercut` CLI, Pi-aware metadata capture extension, optional deduplicated GitHub inbox submission, explicit `/papercuts-review` prompt, agent safety policy, setup/doctor integration, and tests for sanitized append-only workflow-friction notes.
 - Refreshed the repo for current Pi: updated native shortcuts, `/scoped-models`, `/tree`, `/name`, `/reload`, message queue guidance, and the small-by-default setup philosophy.
 - Replaced stale model references with `anthropic/claude-opus-4-8` and `openai-codex/gpt-5.6-sol`.
 - Clarified isolated-worktree use, the email-only approval gate, internal versus external messaging, and background-first browser automation.
