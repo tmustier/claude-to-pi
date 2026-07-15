@@ -1,12 +1,27 @@
+import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
 
 const TOOL_NAME = "papercut";
 const AUTO_SUBMIT_REPO: string | undefined = undefined;
-const SCRIPT_PATH = resolve(dirname(fileURLToPath(import.meta.url)), "..", "scripts", "papercut");
+
+function resolveScriptPath(): string {
+  const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
+  const bundled = resolve(dirname(fileURLToPath(import.meta.url)), "..", "scripts", "papercut");
+  const candidates = [
+    process.env.PAPERCUT_BIN,
+    join(agentDir, "bin", "papercut"),
+    join(homedir(), ".local", "bin", "papercut"),
+    bundled,
+  ];
+  return candidates.find((candidate): candidate is string => Boolean(candidate && existsSync(candidate))) ?? bundled;
+}
+
+const SCRIPT_PATH = resolveScriptPath();
 
 const PARAMETERS = Type.Object({
   note: Type.String({
