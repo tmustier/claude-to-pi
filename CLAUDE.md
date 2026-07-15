@@ -215,7 +215,7 @@ cp ~/claude-to-pi/scripts/papercut ~/.local/bin/papercut
 chmod +x ~/.local/bin/send-gate ~/.local/bin/papercut
 ```
 
-`papercut` lets agents record small, sanitized workflow friction without interrupting the task. The copied `/papercuts-review` prompt only reviews those notes when the user explicitly invokes it.
+`papercut` lets agents record small, sanitized workflow friction without interrupting the task. The Pi-aware extension automatically adds the active session JSONL reference, model, thinking level, context estimate, session size/entry counts, and Pi version. It never uploads prompts, messages, tool results, or JSONL contents. Captures stay local unless the user invokes `/papercuts-submit owner/repository`; `/papercuts-review` remains explicit and local.
 
 Make sure `~/.local/bin` is on PATH:
 

@@ -44,11 +44,11 @@ The user finds git intimidating but does need version control. **Handle git proa
 
 ## Local papercut logging
 
-When you directly encounter a small, real tool, UI, or workflow friction that slows the work but does not merit interruption, log it once with `papercut --model "<current provider/model>" --context "<short task/repo context>" -- "<one or two sanitized sentences>"`. The command uses the nearest `PAPERCUTS.md` from the working directory up to the Git root when one exists; otherwise it uses `~/.pi/agent/PAPERCUTS.md`. Avoid duplicates, speculation, and routine noise.
+When you directly encounter a small, real tool, UI, or workflow friction that slows the work but does not merit interruption, log it once with the `papercut` tool. Supply one or two sanitized sentences, a short task/repo context, and the affected tool/UI surface. Avoid duplicates, speculation, and routine noise.
 
 Papercuts are not blockers, requested work, bugs already being tracked, accomplishments, or status updates. Report blockers immediately to the requester. Use `LOG.md` for chronological work and the user's issue tracker for actionable owned work; a papercut never replaces either. Never include secrets, credentials, tokens, private/customer content, raw messages, or unnecessary command output. If sanitization is uncertain, do not log it.
 
-Review or mine papercuts only when the user explicitly asks or invokes `/papercuts-review`; never run automatic or recurring session mining.
+The tool automatically attaches operational metadata from the active Pi session—session JSONL path and ID, model, thinking level, latest context estimate, JSONL size and entry counts, and Pi version. It does not read or upload prompts, messages, tool results, or JSONL contents. Captures stay local unless the user explicitly invokes `/papercuts-submit owner/repository` or otherwise configures submission. Review local papercuts only when the user invokes `/papercuts-review` or asks explicitly.
 
 ## Outbound communication
 

@@ -1,0 +1,146 @@
+import { stat } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type, type Static } from "typebox";
+
+const TOOL_NAME = "papercut";
+const AUTO_SUBMIT_REPO: string | undefined = undefined;
+const SCRIPT_PATH = resolve(dirname(fileURLToPath(import.meta.url)), "..", "scripts", "papercut");
+
+const PARAMETERS = Type.Object({
+  note: Type.String({
+    description: "One or two sanitized sentences describing a small, directly observed workflow friction.",
+    maxLength: 600,
+  }),
+  context: Type.Optional(
+    Type.String({
+      description: "Short sanitized task/repository context. Omit to derive it from the current working directory.",
+      maxLength: 240,
+    }),
+  ),
+  surface: Type.Optional(
+    Type.String({
+      description: "Tool, command, UI, or workflow surface involved, such as gh pr merge or /resume.",
+      maxLength: 240,
+    }),
+  ),
+});
+
+type Parameters = Static<typeof PARAMETERS>;
+
+type CaptureResult = {
+  status: string;
+  displayTarget: string;
+  submissionUrl?: string | null;
+  submissionError?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+async function piVersion(pi: ExtensionAPI, signal?: AbortSignal): Promise<string | undefined> {
+  const result = await pi.exec("pi", ["--version"], { signal, timeout: 5_000 });
+  const version = result.stdout.trim();
+  return result.code === 0 && version ? version : undefined;
+}
+
+export default function papercutExtension(pi: ExtensionAPI) {
+  pi.registerTool({
+    name: TOOL_NAME,
+    label: "Papercut",
+    description:
+      "Record a small, real workflow friction with sanitized text and automatically attach operational metadata from the active Pi session. This uploads no prompts, messages, tool results, or JSONL contents. Captures stay local unless the user separately configures or invokes GitHub submission.",
+    promptSnippet:
+      "Record small, directly observed workflow friction with active Pi session metadata; never include secrets or customer/private content.",
+    promptGuidelines: [
+      "Use papercut only for a small, directly observed tool, UI, or workflow friction that does not merit interrupting the current task.",
+      "Do not use papercut for blockers, requested work, tracked bugs, accomplishments, status updates, or speculative ideas.",
+      "Never include secrets, credentials, tokens, private/customer content, raw messages, or unnecessary command output in papercut fields; sanitize or skip.",
+      "Do not duplicate an observation already recorded in the current task.",
+    ],
+    parameters: PARAMETERS,
+    async execute(_toolCallId, params: Parameters, signal, _onUpdate, ctx) {
+      const sessionFile = ctx.sessionManager.getSessionFile();
+      const usage = ctx.getContextUsage();
+      const entries = ctx.sessionManager.getEntries();
+      const branch = ctx.sessionManager.getBranch();
+      const sessionStat = sessionFile ? await stat(sessionFile).catch(() => undefined) : undefined;
+      const version = await piVersion(pi, signal).catch(() => undefined);
+      const model = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "unknown";
+
+      const metadata = {
+        thinkingLevel: pi.getThinkingLevel(),
+        sessionFile,
+        sessionId: ctx.sessionManager.getSessionId(),
+        contextTokens: usage?.tokens ?? null,
+        contextWindow: usage?.contextWindow ?? ctx.model?.contextWindow ?? null,
+        contextPercent: usage?.percent ?? null,
+        sessionBytes: sessionStat?.size ?? null,
+        sessionEntries: entries.length,
+        branchEntries: branch.length,
+        piVersion: version,
+        surface: params.surface,
+      };
+
+      const args = [SCRIPT_PATH, "add", "--json", "--model", model, "--metadata-json", JSON.stringify(metadata)];
+      if (params.context) args.push("--context", params.context);
+      if (AUTO_SUBMIT_REPO) args.push("--submit-repo", AUTO_SUBMIT_REPO);
+      args.push("--", params.note);
+
+      const result = await pi.exec("python3", args, { signal, timeout: 40_000 });
+      if (result.code !== 0) {
+        throw new Error(result.stderr.trim() || result.stdout.trim() || "papercut capture failed");
+      }
+
+      let capture: CaptureResult;
+      try {
+        capture = JSON.parse(result.stdout) as CaptureResult;
+      } catch {
+        throw new Error(`papercut returned invalid JSON: ${result.stdout.trim()}`);
+      }
+
+      const summary = capture.submissionUrl
+        ? `Recorded locally and submitted to ${capture.submissionUrl}`
+        : capture.submissionError
+          ? `Recorded locally at ${capture.displayTarget}; central submission is pending (${capture.submissionError})`
+          : `Recorded locally at ${capture.displayTarget}`;
+
+      return {
+        content: [{ type: "text", text: summary }],
+        details: {
+          target: capture.displayTarget,
+          submissionUrl: capture.submissionUrl ?? undefined,
+          submissionPending: Boolean(capture.submissionError),
+          sessionFile,
+          sessionId: metadata.sessionId,
+          model,
+          thinkingLevel: metadata.thinkingLevel,
+          contextTokens: metadata.contextTokens,
+          contextWindow: metadata.contextWindow,
+          contextPercent: metadata.contextPercent,
+          sessionBytes: metadata.sessionBytes,
+          sessionEntries: metadata.sessionEntries,
+          branchEntries: metadata.branchEntries,
+          piVersion: metadata.piVersion,
+        },
+      };
+    },
+  });
+
+  pi.registerCommand("papercuts-submit", {
+    description: "Submit pending local papercuts to a GitHub issue inbox: /papercuts-submit owner/repository",
+    handler: async (commandArgs, ctx) => {
+      const repo = commandArgs.trim() || AUTO_SUBMIT_REPO;
+      if (!repo) {
+        ctx.ui.notify("Usage: /papercuts-submit owner/repository", "warning");
+        return;
+      }
+      const result = await pi.exec(
+        "python3",
+        [SCRIPT_PATH, "submit", "--all", "--repo", repo, "--cwd", ctx.cwd],
+        { timeout: 60_000 },
+      );
+      const message = (result.stdout || result.stderr).trim() || "No submission output";
+      ctx.ui.notify(message, result.code === 0 ? "info" : "warning");
+    },
+  });
+}

@@ -55,7 +55,7 @@ This repo aims for useful defaults without turning Pi into a giant pre-bundled d
 | --- | --- |
 | **Settings** | Current Anthropic/OpenAI-Codex scoped models, xhigh thinking, Pi compaction defaults, and a small default package set. |
 | **AGENTS.md** | Plain-language working style, current model policy, git hygiene, send-gate, and non-interactive command guidance. |
-| **Extensions** | `/open`, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, `/update`, and persisted native auto-compaction. |
+| **Extensions** | `/open`, Pi-aware papercut capture, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, `/update`, and persisted native auto-compaction. |
 | **Prompts** | `/onboard`, `/machine-doctor`, `/auto-pr`, `/bootstrap-from-claude-code`, `/papercuts-review`. |
 | **Subagents** | PR reviewer and general reviewer agent definitions. |
 | **Scripts** | `send-gate` — a 60s abort window before outbound email sends; `papercut` — safe, append-only workflow-friction notes. |
@@ -77,9 +77,11 @@ If you want plan mode, todos, command approvals, sandboxing, background shells, 
 
 ### Papercut logging
 
-The setup installs `papercut`, a standalone Python CLI for recording small, directly observed tool, UI, or workflow friction without interrupting active work. It writes sanitized, two-sentence-max notes to the nearest repo-local `PAPERCUTS.md` when one exists, otherwise `~/.pi/agent/PAPERCUTS.md`.
+The setup installs `papercut`, a standalone Python CLI plus a Pi-aware tool for recording small, directly observed tool, UI, or workflow friction without interrupting active work. It writes sanitized, two-sentence-max notes to the nearest repo-local `PAPERCUTS.md` when one exists, otherwise `~/.pi/agent/PAPERCUTS.md`.
 
-Review is deliberately manual: invoke `/papercuts-review` in Pi or run `papercut review --all`. The workflow does not install a hook, recurring job, or automatic session miner, and it does not replace blocker reporting, work logs, or issue tracking.
+The Pi tool automatically attaches operational metadata from the active session: JSONL path and session ID, provider/model, thinking level, latest context estimate, JSONL byte size, total and active-branch entry counts, and Pi version. It does not read or upload prompts, messages, tool results, or JSONL contents.
+
+Review remains manual through `/papercuts-review` or `papercut review --all`. Captures stay local by default; `/papercuts-submit owner/repository` can send pending sanitized records to a GitHub issue inbox with local receipt-based deduplication. Papercuts do not replace blocker reporting, work logs, or issue tracking.
 
 ### Compaction defaults
 

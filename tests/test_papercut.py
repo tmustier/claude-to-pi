@@ -74,6 +74,49 @@ class PapercutCliTests(unittest.TestCase):
         self.assertIn("The resolver used the global default outside Git.", content)
         self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
 
+    def test_runtime_metadata_is_recorded_and_returned(self) -> None:
+        metadata = {
+            "thinkingLevel": "xhigh",
+            "sessionFile": str(self.root / "sessions" / "example.jsonl"),
+            "sessionId": "session-123",
+            "contextTokens": 12345,
+            "contextWindow": 200000,
+            "contextPercent": 6.1725,
+            "sessionBytes": 45678,
+            "sessionEntries": 90,
+            "branchEntries": 70,
+            "piVersion": "0.80.7",
+            "surface": "bash",
+        }
+        result = self.run_cli(
+            "--json",
+            "--metadata-json",
+            json.dumps(metadata),
+            "--model",
+            "test/provider-model",
+            "--context",
+            "test:runtime-metadata",
+            "--",
+            "The tool obscured the active session context estimate.",
+        )
+
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["metadata"]["sessionId"], "session-123")
+        content = (self.agent_dir / "PAPERCUTS.md").read_text()
+        self.assertIn("- Thinking level: `xhigh`", content)
+        self.assertIn("- Session ID: `session-123`", content)
+        self.assertIn("- Context usage: `12345 / 200000 (6.17%)`", content)
+        self.assertIn("- Session size: `45678 bytes`", content)
+        self.assertIn("- Session entries: `90 total / 70 active branch`", content)
+        self.assertIn("- Pi version: `0.80.7`", content)
+
+        reviewed = json.loads(self.run_cli("review", "--global", "--json").stdout)
+        entry = reviewed["entries"][0]
+        self.assertEqual(entry["thinking_level"], "xhigh")
+        self.assertEqual(entry["context_tokens"], 12345)
+        self.assertEqual(entry["session_bytes"], 45678)
+        self.assertEqual(entry["branch_entries"], 70)
+
     def test_explicit_local_creates_at_git_root(self) -> None:
         repo = self.make_repo()
         nested = repo / "one" / "two"
@@ -172,6 +215,126 @@ class PapercutCliTests(unittest.TestCase):
         payload = json.loads(json_result.stdout)
         self.assertEqual(payload["matched"], 2)
         self.assertEqual({entry["scope"] for entry in payload["entries"]}, {"global", "local"})
+
+    def test_submit_creates_issue_with_metadata_and_deduplicates(self) -> None:
+        metadata = {
+            "thinkingLevel": "medium",
+            "sessionFile": str(self.root / "sessions" / "submit.jsonl"),
+            "sessionId": "submit-session",
+            "contextTokens": 1000,
+            "contextWindow": 200000,
+            "contextPercent": 0.5,
+            "sessionBytes": 2048,
+            "sessionEntries": 12,
+            "branchEntries": 10,
+            "piVersion": "0.80.7",
+            "surface": "gh pr merge",
+        }
+        self.run_cli(
+            "--global",
+            "--metadata-json",
+            json.dumps(metadata),
+            "--model",
+            "test/model",
+            "--context",
+            "repo:test submission",
+            "--",
+            "The merge command returned a misleading local failure after remote success.",
+        )
+
+        fake_bin = self.root / "bin"
+        fake_bin.mkdir()
+        gh_log = self.root / "gh.log"
+        fake_gh = fake_bin / "gh"
+        fake_gh.write_text(
+            "#!/bin/sh\n"
+            "if [ \"$1 $2\" = \"issue list\" ]; then exit 0; fi\n"
+            "printf '%s\\n' \"$@\" > \"$FAKE_GH_LOG\"\n"
+            "echo https://github.com/Nexcade/vibes/issues/123\n"
+        )
+        fake_gh.chmod(0o755)
+        env = {
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "FAKE_GH_LOG": str(gh_log),
+        }
+
+        submitted = self.run_cli(
+            "submit",
+            "--global",
+            "--repo",
+            "Nexcade/vibes",
+            "--json",
+            extra_env=env,
+        )
+        payload = json.loads(submitted.stdout)
+        self.assertEqual(payload["pendingBefore"], 1)
+        self.assertEqual(payload["submitted"][0]["url"], "https://github.com/Nexcade/vibes/issues/123")
+        gh_args = gh_log.read_text()
+        self.assertIn("papercut-inbox", gh_args)
+        self.assertIn("submit-session", gh_args)
+        self.assertIn("1000 / 200000 (0.50%)", gh_args)
+        self.assertIn("No session messages, prompts, tool results, or JSONL contents were uploaded", gh_args)
+
+        second = self.run_cli(
+            "submit",
+            "--global",
+            "--repo",
+            "Nexcade/vibes",
+            "--json",
+            extra_env=env,
+        )
+        self.assertEqual(json.loads(second.stdout)["pendingBefore"], 0)
+
+    def test_add_auto_submits_and_receipt_matches_local_entry(self) -> None:
+        fake_bin = self.root / "bin-auto"
+        fake_bin.mkdir()
+        fake_gh = fake_bin / "gh"
+        fake_gh.write_text(
+            "#!/bin/sh\n"
+            "if [ \"$1 $2\" = \"issue list\" ]; then exit 0; fi\n"
+            "echo https://github.com/Nexcade/vibes/issues/456\n"
+        )
+        fake_gh.chmod(0o755)
+        env = {"PATH": f"{fake_bin}:{os.environ['PATH']}"}
+        metadata = {
+            "sessionId": "auto-submit-session",
+            "contextTokens": 321,
+            "contextWindow": 200000,
+            "contextPercent": 0.1605,
+            "sessionBytes": 1024,
+            "sessionEntries": 8,
+            "branchEntries": 7,
+            "piVersion": "0.80.7",
+        }
+
+        recorded = self.run_cli(
+            "--global",
+            "--json",
+            "--submit-repo",
+            "Nexcade/vibes",
+            "--metadata-json",
+            json.dumps(metadata),
+            "--model",
+            "test/model",
+            "--context",
+            "test:auto-submit",
+            "--",
+            "Automatic submission retained a durable local copy and receipt.",
+            extra_env=env,
+        )
+        payload = json.loads(recorded.stdout)
+        self.assertEqual(payload["submissionUrl"], "https://github.com/Nexcade/vibes/issues/456")
+        self.assertIsNone(payload["submissionError"])
+
+        retried = self.run_cli(
+            "submit",
+            "--global",
+            "--repo",
+            "Nexcade/vibes",
+            "--json",
+            extra_env=env,
+        )
+        self.assertEqual(json.loads(retried.stdout)["pendingBefore"], 0)
 
     def test_secret_like_input_is_rejected_without_creating_file(self) -> None:
         result = self.run_cli(

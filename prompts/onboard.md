@@ -164,7 +164,7 @@ papercut resolve --json
 papercut --dry-run -- "A safe setup verification note."
 ```
 
-Explain that agents use it only for small, sanitized workflow friction; blockers and tracked work go through normal reporting. Review is never automatic—the user invokes `/papercuts-review` when wanted.
+Explain that agents use it only for small, sanitized workflow friction; blockers and tracked work go through normal reporting. The Pi-aware tool automatically attaches the active session JSONL reference, model, thinking level, context estimate, session size/entry counts, and Pi version, but does not inspect or upload prompts, messages, tool results, or JSONL contents. Captures stay local unless the user invokes `/papercuts-submit owner/repository`. Review is never automatic—the user invokes `/papercuts-review` when wanted.
 
 ## Step 6: Pull packages
 
@@ -268,7 +268,8 @@ Give this tour:
 - **`/tree`** or **Esc twice while idle** opens the conversation tree for branch/fork/time-travel control.
 - **`/name <name>`** names a session so `/resume` is easier.
 - **`/reload`** hot-reloads extensions, skills, prompts, and context files.
-- **`/papercuts-review`** explicitly reviews small workflow snags recorded by the local helper; nothing mines sessions automatically.
+- **`/papercuts-review`** explicitly reviews small workflow snags recorded by the local helper. Operational session metadata is attached automatically, but session content is not mined.
+- **`/papercuts-submit owner/repository`** optionally sends pending sanitized records to a GitHub issue inbox; no destination is configured by default.
 - **Pi can read its own docs** and can extend itself. If something is missing, ask it to check docs and add the lightest-weight solution.
 
 Ask whether they want to try a small real task now.
