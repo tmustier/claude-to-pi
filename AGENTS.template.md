@@ -42,6 +42,14 @@ The user finds git intimidating but does need version control. **Handle git proa
 - Never leave behind conflicts or uncommitted changes created by your work. Remove the task worktree after its changes are safely pushed or merged and it is no longer needed.
 - If the user asks whether work is saved, check `git status` and `git log` and explain the result in plain language.
 
+## Local papercut logging
+
+When you directly encounter a small, real tool, UI, or workflow friction that slows the work but does not merit interruption, log it once with `papercut --model "<current provider/model>" --context "<short task/repo context>" -- "<one or two sanitized sentences>"`. The command uses the nearest `PAPERCUTS.md` from the working directory up to the Git root when one exists; otherwise it uses `~/.pi/agent/PAPERCUTS.md`. Avoid duplicates, speculation, and routine noise.
+
+Papercuts are not blockers, requested work, bugs already being tracked, accomplishments, or status updates. Report blockers immediately to the requester. Use `LOG.md` for chronological work and the user's issue tracker for actionable owned work; a papercut never replaces either. Never include secrets, credentials, tokens, private/customer content, raw messages, or unnecessary command output. If sanitization is uncertain, do not log it.
+
+Review or mine papercuts only when the user explicitly asks or invokes `/papercuts-review`; never run automatic or recurring session mining.
+
 ## Outbound communication
 
 ### Email approval gate
