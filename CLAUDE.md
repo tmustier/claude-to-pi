@@ -237,7 +237,7 @@ If the user wants browser automation via `surf-cli`, finish that later from `/on
 
 ## Step 8: Pull Pi packages
 
-This downloads the packages configured in `settings.json`, including `tmustier/pi-auto-compact@v0.1.1`:
+This downloads the packages configured in `settings.json`, including `tmustier/pi-auto-compact@v0.1.2`:
 
 ```bash
 pi update
