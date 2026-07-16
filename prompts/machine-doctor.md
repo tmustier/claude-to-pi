@@ -27,7 +27,7 @@ Goals:
    - Verify `papercut resolve --json` and a sanitized `papercut --dry-run` succeed; do not append or submit a real note during the audit
 3. Verify Pi package setup:
    - Read `~/.pi/agent/settings.json`
-   - Check that the default package list is small and current: `pi-subagents`, `pi-mcp-adapter`, `tmustier/pi-auto-compact@v0.1.1`, `pi-web-access`, `agent-browser`, `surf-cli`, document skills, and `tmustier/claude-to-pi` skills
+   - Check that the default package list is small and current: `pi-subagents`, `pi-mcp-adapter`, `tmustier/pi-auto-compact@v0.1.2`, `pi-web-access`, `agent-browser`, `surf-cli`, document skills, and `tmustier/claude-to-pi` skills
    - Confirm `~/.pi/agent/auto-compact.json` is valid and uses 200,000 tokens when the user has no intentional override
    - Flag an active `model-compaction-trigger.ts`, `soft-context-compaction.json`, or another proactive-compaction package as a potential duplicate trigger; preserve a timestamped backup when disabling it
    - If packages/resources look missing or stale, suggest and/or run `pi update`

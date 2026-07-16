@@ -114,7 +114,7 @@ import json, pathlib
 settings_path = pathlib.Path.home() / '.pi' / 'agent' / 'settings.json'
 settings = json.loads(settings_path.read_text())
 
-auto_compact = 'git:github.com/tmustier/pi-auto-compact@v0.1.1'
+auto_compact = 'git:github.com/tmustier/pi-auto-compact@v0.1.2'
 settings['packages'] = [
     auto_compact if isinstance(pkg, str) and 'tmustier/pi-auto-compact' in pkg else pkg
     for pkg in settings.get('packages', [])
@@ -174,7 +174,7 @@ Run:
 pi update
 ```
 
-Explain: this updates Pi and downloads the packages listed in `settings.json`, including `tmustier/pi-auto-compact@v0.1.1`. It may take a few minutes. Run `/reload`, then `/auto-compact`, to confirm the 200,000-token default policy.
+Explain: this updates Pi and downloads the packages listed in `settings.json`, including `tmustier/pi-auto-compact@v0.1.2`. It may take a few minutes. Run `/reload`, then `/auto-compact`, to confirm the 200,000-token default policy.
 
 ## Step 7: Browser automation
 
