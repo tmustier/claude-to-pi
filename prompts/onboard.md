@@ -40,12 +40,13 @@ command -v npm >/dev/null 2>&1 && echo "✓ npm $(npm --version)" || echo "✗ n
 command -v git >/dev/null 2>&1 && echo "✓ git $(git --version)" || echo "✗ git missing"
 command -v gh >/dev/null 2>&1 && echo "✓ gh $(gh --version | head -n 1)" || echo "✗ gh missing"
 command -v pi >/dev/null 2>&1 && echo "✓ pi $(pi --version 2>/dev/null || echo installed)" || echo "✗ pi missing"
+command -v uv >/dev/null 2>&1 && echo "✓ uv $(uv --version)" || echo "✗ uv missing"
 ```
 
 For anything missing, give the exact command. Typical fixes:
 
 ```bash
-brew install git gh
+brew install git gh uv
 npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 ```
 
@@ -144,7 +145,8 @@ cp ~/claude-to-pi/prompts/*.md ~/.pi/agent/prompts/
 cp ~/claude-to-pi/extensions/*.ts ~/.pi/agent/extensions/
 cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate
 cp ~/claude-to-pi/scripts/papercut ~/.local/bin/papercut
-chmod +x ~/.local/bin/send-gate ~/.local/bin/papercut
+chmod +x ~/.local/bin/send-gate ~/.local/bin/papercut ~/claude-to-pi/scripts/setup-health
+ln -sfn ~/claude-to-pi/scripts/setup-health ~/.local/bin/setup-health
 
 # Disable the superseded compaction implementation and preserve timestamped backups.
 STAMP="$(date +%Y%m%d%H%M%S)"
@@ -162,6 +164,7 @@ Verify the papercut helper without writing a real note:
 command -v papercut
 papercut resolve --json
 papercut --dry-run -- "A safe setup verification note."
+setup-health --quick --summary
 ```
 
 Explain that agents use it only for small, sanitized workflow friction; blockers and tracked work go through normal reporting. The Pi-aware tool automatically attaches the active session JSONL reference, model, thinking level, context estimate, session size/entry counts, and Pi version, but does not inspect or upload prompts, messages, tool results, or JSONL contents. Captures stay local unless the user invokes `/papercuts-submit owner/repository`. Review is never automatic—the user invokes `/papercuts-review` when wanted.
@@ -171,10 +174,10 @@ Explain that agents use it only for small, sanitized workflow friction; blockers
 Run:
 
 ```bash
-pi update
+pi update --extensions
 ```
 
-Explain: this updates Pi and downloads the packages listed in `settings.json`, including `tmustier/pi-auto-compact@v0.1.2`. It may take a few minutes. Run `/reload`, then `/auto-compact`, to confirm the 200,000-token default policy.
+Explain: this downloads the packages listed in `settings.json`, including `tmustier/pi-auto-compact@v0.1.2`. It may take a few minutes. Run `setup-health --quick --summary`, then `/reload` and `/auto-compact`, to confirm the installation and 200,000-token default policy. Use `/machine-doctor` for the complete live audit.
 
 ## Step 7: Browser automation
 

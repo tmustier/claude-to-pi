@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added a trusted, manifest-driven `setup-health` runner with command, version, file, package, symlink, safe runtime, quick, live, JSON, and multi-manifest checks; integrated it with onboarding and `/machine-doctor`.
+- Updated the bundled Chrome-cookie helper to a self-contained `uv` runtime with label-boundary domain matching and regression coverage.
 - Added the `papercut` CLI, Pi-aware metadata capture extension, optional deduplicated GitHub inbox submission, explicit `/papercuts-review` prompt, agent safety policy, setup/doctor integration, and tests for sanitized append-only workflow-friction notes.
 - Refreshed the repo for current Pi: updated native shortcuts, `/scoped-models`, `/tree`, `/name`, `/reload`, message queue guidance, and the small-by-default setup philosophy.
 - Replaced stale model references with `anthropic/claude-opus-4-8` and `openai-codex/gpt-5.6-sol`.

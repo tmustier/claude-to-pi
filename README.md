@@ -58,7 +58,7 @@ This repo aims for useful defaults without turning Pi into a giant pre-bundled d
 | **Extensions** | `/open`, Pi-aware papercut capture, startup tips, non-interactive bash guardrails, `.claude/rules/` compatibility, `/update`, and persisted native auto-compaction. |
 | **Prompts** | `/onboard`, `/machine-doctor`, `/auto-pr`, `/bootstrap-from-claude-code`, `/papercuts-review`. |
 | **Subagents** | PR reviewer and general reviewer agent definitions. |
-| **Scripts** | `send-gate` — a 60s abort window before outbound email sends; `papercut` — safe, append-only workflow-friction notes. |
+| **Scripts** | `send-gate` — a 60s abort window before outbound email sends; `papercut` — safe, append-only workflow-friction notes; `setup-health` — manifest-driven installation checks. |
 | **Skills** | `agent-friendly-design`, `chrome-cookies`, `customer-intel`, `tmux`, `todo-audit`, `unslop`. |
 
 ### Default packages
@@ -74,6 +74,18 @@ The template keeps package defaults deliberately small:
 - This repo's own Agent Skills from `tmustier/claude-to-pi`.
 
 If you want plan mode, todos, command approvals, sandboxing, background shells, CRM tools, or a different browser workflow, ask Pi first. There may already be a maintained extension; if not, Pi can usually build a focused one.
+
+### Setup health
+
+`scripts/setup-health` runs trusted checks declared in `health-checks.json`. It validates commands, versions, files, package sources, symlinks, and safe command probes while deliberately suppressing probe output. Additional organisations can pass another trusted manifest with a repeated `--manifest` flag.
+
+```bash
+setup-health --quick --summary       # low-cost local check
+setup-health --live                  # include authenticated/network doctors
+setup-health --json                  # structured result for an agent or CI
+```
+
+Checks never upgrade or repair software automatically. `/machine-doctor` starts with the structured health result, explains remediation, and asks before material configuration changes. Correctness properties such as account selection or domain-boundary matching remain tested in their owning repositories. See [`docs/setup-health.md`](docs/setup-health.md) for the manifest schema and trust boundary.
 
 ### Papercut logging
 
