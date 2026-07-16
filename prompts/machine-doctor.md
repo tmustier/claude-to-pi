@@ -10,6 +10,14 @@ Context:
 - Do **not** assume a fixed checkout path; infer the active `claude-to-pi` checkout from symlink targets, copied files, or `~/claude-to-pi` when present.
 - Do not overwrite intentional user config blindly.
 
+Start with the deterministic health runner from the active checkout:
+
+```bash
+/path/to/claude-to-pi/scripts/setup-health --live --json
+```
+
+Resolve the path rather than assuming `/path/to`. The trusted manifest checks command availability, versions, package sources, broken symlinks, self-contained helper runtimes, and safe live probes without printing command output. Use its structured failures as the first repair queue, then perform the qualitative checks below. Do not automatically upgrade packages merely because a check fails.
+
 Goals:
 
 1. Verify Pi resources are set up sensibly in `~/.pi/agent`:
@@ -30,7 +38,7 @@ Goals:
    - Check that the default package list is small and current: `pi-subagents`, `pi-mcp-adapter`, `tmustier/pi-auto-compact@v0.1.2`, `pi-web-access`, `agent-browser`, `surf-cli`, document skills, and `tmustier/claude-to-pi` skills
    - Confirm `~/.pi/agent/auto-compact.json` is valid and uses 200,000 tokens when the user has no intentional override
    - Flag an active `model-compaction-trigger.ts`, `soft-context-compaction.json`, or another proactive-compaction package as a potential duplicate trigger; preserve a timestamped backup when disabling it
-   - If packages/resources look missing or stale, suggest and/or run `pi update`
+   - If packages/resources look missing or stale, suggest and/or run `pi update --extensions`
    - Confirm `AGENTS.md` contains the Pi-aware papercut metadata/safety policy and `prompts/papercuts-review.md` exists; preserve intentional customizations when repairing them
    - Confirm `extensions/papercut.ts` is loaded and exposes the `papercut` tool plus `/papercuts-submit`; do not invoke the tool merely as a setup test
 4. Verify model setup:

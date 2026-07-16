@@ -36,6 +36,7 @@ command -v npm && echo "✓ npm $(npm --version)" || echo "✗ npm missing"
 command -v git && echo "✓ git $(git --version)" || echo "✗ git missing"
 command -v gh && echo "✓ gh $(gh --version | head -n 1)" || echo "✗ gh missing"
 command -v pi && echo "✓ pi $(pi --version 2>/dev/null || echo '(installed)')" || echo "✗ pi missing"
+command -v uv && echo "✓ $(uv --version)" || echo "✗ uv missing"
 ```
 
 For anything missing:
@@ -43,6 +44,7 @@ For anything missing:
 - **node/npm**: "You need Node.js. Go to https://nodejs.org and download the LTS version. Run the installer, then come back."
 - **git**: `brew install git`
 - **gh**: `brew install gh`
+- **uv**: `brew install uv`
 - **pi**: Will be installed/updated in Step 4.
 
 Wait for them to install each missing tool before continuing.
@@ -212,7 +214,8 @@ fi
 mkdir -p ~/.local/bin
 cp ~/claude-to-pi/scripts/send-gate ~/.local/bin/send-gate
 cp ~/claude-to-pi/scripts/papercut ~/.local/bin/papercut
-chmod +x ~/.local/bin/send-gate ~/.local/bin/papercut
+chmod +x ~/.local/bin/send-gate ~/.local/bin/papercut ~/claude-to-pi/scripts/setup-health
+ln -sfn ~/claude-to-pi/scripts/setup-health ~/.local/bin/setup-health
 ```
 
 `papercut` lets agents record small, sanitized workflow friction without interrupting the task. The Pi-aware extension automatically adds the active session JSONL reference, model, thinking level, context estimate, session size/entry counts, and Pi version. It never uploads prompts, messages, tool results, or JSONL contents. Captures stay local unless the user invokes `/papercuts-submit owner/repository`; `/papercuts-review` remains explicit and local.
@@ -240,10 +243,10 @@ If the user wants browser automation via `surf-cli`, finish that later from `/on
 This downloads the packages configured in `settings.json`, including `tmustier/pi-auto-compact@v0.1.2`:
 
 ```bash
-pi update
+pi update --extensions
 ```
 
-This may take a few minutes. Let the user know. Run `/reload`, then `/auto-compact`, inside Pi to confirm the 200,000-token default policy.
+This may take a few minutes. Let the user know. Run `setup-health --quick --summary`, then `/reload` and `/auto-compact` inside Pi to confirm the installation and 200,000-token default policy.
 
 ## Step 9: Hand off to Pi
 

@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""Run trusted, declarative Pi setup-health checks without exposing command output."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
+
+
+@dataclass
+class Result:
+    id: str
+    label: str
+    status: str
+    message: str
+    duration_ms: int = 0
+
+
+class CheckFailure(Exception):
+    pass
+
+
+def agent_dir() -> Path:
+    return Path(os.environ.get("PI_CODING_AGENT_DIR", "~/.pi/agent")).expanduser()
+
+
+def expand(value: str, manifest_dir: Path) -> str:
+    replacements = {
+        "manifest_dir": str(manifest_dir),
+        "home": str(Path.home()),
+        "agent_dir": str(agent_dir()),
+    }
+    return os.path.expandvars(os.path.expanduser(value.format(**replacements)))
+
+
+def argv_for(raw: Any, manifest_dir: Path) -> list[str]:
+    if not isinstance(raw, list) or not raw or not all(isinstance(item, str) for item in raw):
+        raise CheckFailure("command must be a non-empty string array")
+    return [expand(item, manifest_dir) for item in raw]
+
+
+def parse_version(text: str, pattern: str | None = None) -> tuple[int, ...]:
+    match = re.search(pattern or r"v?(\d+(?:\.\d+)+)", text)
+    if not match:
+        raise CheckFailure("could not parse version")
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def requested_version(value: str) -> tuple[int, ...]:
+    match = re.search(r"\d+(?:\.\d+)+", value)
+    if not match:
+        raise CheckFailure(f"invalid requested version: {value}")
+    return tuple(int(part) for part in match.group(0).split("."))
+
+
+def version_text(value: tuple[int, ...]) -> str:
+    return ".".join(str(part) for part in value)
+
+
+def run_command(argv: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            argv,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=os.environ.copy(),
+        )
+    except FileNotFoundError as exc:
+        raise CheckFailure(f"command unavailable: {argv[0]}") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise CheckFailure(f"timed out after {timeout:g}s") from exc
+
+
+def check_command(check: dict[str, Any], manifest_dir: Path) -> str:
+    name = expand(str(check.get("command", "")), manifest_dir)
+    if not name:
+        raise CheckFailure("command name is empty")
+    found = shutil.which(name)
+    if not found:
+        raise CheckFailure(f"not on PATH: {name}")
+    return f"available at {found}"
+
+
+def check_run(check: dict[str, Any], manifest_dir: Path) -> str:
+    argv = argv_for(check.get("command"), manifest_dir)
+    completed = run_command(argv, float(check.get("timeoutSeconds", 15)))
+    if completed.returncode != 0:
+        raise CheckFailure(f"exited with status {completed.returncode}")
+    expected = check.get("expectStdout")
+    if expected and not re.search(str(expected), completed.stdout):
+        raise CheckFailure("stdout did not match the expected pattern")
+    return "command completed successfully"
+
+
+def check_version(check: dict[str, Any], manifest_dir: Path) -> str:
+    argv = argv_for(check.get("command"), manifest_dir)
+    completed = run_command(argv, float(check.get("timeoutSeconds", 10)))
+    if completed.returncode != 0:
+        raise CheckFailure(f"version command exited with status {completed.returncode}")
+    current = parse_version(completed.stdout + "\n" + completed.stderr, check.get("regex"))
+    if "minimum" in check:
+        minimum = requested_version(str(check["minimum"]))
+        if current < minimum:
+            raise CheckFailure(f"found {version_text(current)}; need {version_text(minimum)} or newer")
+    if "exact" in check:
+        exact = requested_version(str(check["exact"]))
+        if current != exact:
+            raise CheckFailure(f"found {version_text(current)}; need {version_text(exact)}")
+    return f"version {version_text(current)}"
+
+
+def candidate_paths(check: dict[str, Any], manifest_dir: Path) -> list[Path]:
+    raw_paths = check.get("paths")
+    if raw_paths is None:
+        raw_paths = [check.get("path", "")]
+    if not isinstance(raw_paths, list) or not raw_paths:
+        raise CheckFailure("path or paths must be configured")
+    return [Path(expand(str(item), manifest_dir)) for item in raw_paths]
+
+
+def check_file(check: dict[str, Any], manifest_dir: Path) -> str:
+    candidates = candidate_paths(check, manifest_dir)
+    target = next((item for item in candidates if item.exists()), candidates[0])
+    if not target.exists():
+        raise CheckFailure("missing: " + " or ".join(str(item) for item in candidates))
+    if check.get("executable") and not os.access(target, os.X_OK):
+        raise CheckFailure(f"not executable: {target}")
+    expected_kind = check.get("kind")
+    if expected_kind == "file" and not target.is_file():
+        raise CheckFailure(f"not a file: {target}")
+    if expected_kind == "directory" and not target.is_dir():
+        raise CheckFailure(f"not a directory: {target}")
+    return f"present: {target}"
+
+
+def check_same_file(check: dict[str, Any], manifest_dir: Path) -> str:
+    expected = Path(expand(str(check.get("expected", "")), manifest_dir))
+    actual = Path(expand(str(check.get("actual", "")), manifest_dir))
+    try:
+        matches = expected.read_bytes() == actual.read_bytes()
+    except FileNotFoundError as exc:
+        raise CheckFailure(f"file missing: {exc.filename}") from exc
+    if not matches:
+        raise CheckFailure(f"installed copy differs from {expected}")
+    return f"matches {expected}"
+
+
+def check_broken_symlinks(check: dict[str, Any], manifest_dir: Path) -> str:
+    root = Path(expand(str(check.get("path", "")), manifest_dir))
+    if not root.exists():
+        if root.is_symlink():
+            raise CheckFailure(f"broken root symlink: {root}")
+        if check.get("allowMissing"):
+            return f"directory not present: {root}"
+        raise CheckFailure(f"directory missing: {root}")
+    broken: list[str] = []
+    for current, dirs, files in os.walk(root, followlinks=False):
+        dirs[:] = [name for name in dirs if name not in {".git", "node_modules", "npm", "git"}]
+        for name in [*dirs, *files]:
+            candidate = Path(current) / name
+            if candidate.is_symlink() and not candidate.exists():
+                broken.append(str(candidate))
+                if len(broken) >= 5:
+                    break
+        if len(broken) >= 5:
+            break
+    if broken:
+        raise CheckFailure("broken symlink(s): " + ", ".join(broken))
+    return "no broken symlinks"
+
+
+def read_json_file(check: dict[str, Any], manifest_dir: Path) -> tuple[Path, dict[str, Any]]:
+    target = Path(expand(str(check.get("path") or check.get("settings") or ""), manifest_dir))
+    try:
+        payload = json.loads(target.read_text())
+    except FileNotFoundError as exc:
+        raise CheckFailure(f"JSON file missing: {target}") from exc
+    except json.JSONDecodeError as exc:
+        raise CheckFailure(f"invalid JSON: {target}") from exc
+    if not isinstance(payload, dict):
+        raise CheckFailure(f"expected a JSON object: {target}")
+    return target, payload
+
+
+def dotted_value(payload: dict[str, Any], dotted: str) -> Any:
+    current: Any = payload
+    for part in dotted.split("."):
+        if not isinstance(current, dict) or part not in current:
+            raise CheckFailure(f"missing JSON value: {dotted}")
+        current = current[part]
+    return current
+
+
+def check_json_values(check: dict[str, Any], manifest_dir: Path) -> str:
+    target, payload = read_json_file(check, manifest_dir)
+    expected = check.get("expected")
+    if not isinstance(expected, dict) or not expected:
+        raise CheckFailure("expected must be a non-empty object")
+    mismatches = [key for key, value in expected.items() if dotted_value(payload, key) != value]
+    if mismatches:
+        raise CheckFailure("unexpected JSON value(s): " + ", ".join(mismatches))
+    return f"{len(expected)} expected value(s) in {target}"
+
+
+def check_models(check: dict[str, Any], manifest_dir: Path) -> str:
+    target, payload = read_json_file(check, manifest_dir)
+    raw_models = payload.get("enabledModels", payload.get("models", []))
+    if not isinstance(raw_models, list):
+        raise CheckFailure(f"models is not an array: {target}")
+    models = {str(item).rsplit(":", 1)[0] for item in raw_models}
+    expected = [str(item) for item in check.get("expected", [])]
+    missing = [item for item in expected if item not in models]
+    if missing:
+        raise CheckFailure("missing model(s): " + ", ".join(missing))
+    return f"{len(expected)} expected model(s) configured"
+
+
+def check_file_age(check: dict[str, Any], manifest_dir: Path) -> str:
+    candidates = candidate_paths(check, manifest_dir)
+    target = next((item for item in candidates if item.exists()), candidates[0])
+    if not target.exists():
+        raise CheckFailure("missing freshness marker: " + " or ".join(str(item) for item in candidates))
+    maximum_days = float(check.get("maximumDays", 7))
+    age_days = max(0.0, (time.time() - target.stat().st_mtime) / 86_400)
+    if age_days > maximum_days:
+        raise CheckFailure(f"last refreshed {age_days:.1f} days ago; expected within {maximum_days:g} days")
+    return f"refreshed {age_days:.1f} days ago"
+
+
+def package_source(item: Any) -> str | None:
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict) and isinstance(item.get("source"), str):
+        return item["source"]
+    return None
+
+
+def check_packages(check: dict[str, Any], manifest_dir: Path) -> str:
+    settings = Path(expand(str(check.get("settings", "{agent_dir}/settings.json")), manifest_dir))
+    try:
+        data = json.loads(settings.read_text())
+    except FileNotFoundError as exc:
+        raise CheckFailure(f"settings missing: {settings}") from exc
+    except json.JSONDecodeError as exc:
+        raise CheckFailure(f"settings are invalid JSON: {settings}") from exc
+    raw_packages = data.get("packages", [])
+    if not isinstance(raw_packages, list):
+        raise CheckFailure(f"packages is not an array: {settings}")
+    sources = {source for item in raw_packages if (source := package_source(item))}
+
+    def configured(expected: str) -> bool:
+        return any(actual == expected or actual.startswith(expected + "@") for actual in sources)
+
+    expected = [str(item) for item in check.get("expectedSources", [])]
+    missing = [source for source in expected if not configured(source)]
+    alternatives = check.get("expectedAnyOf", [])
+    if not isinstance(alternatives, list):
+        raise CheckFailure("expectedAnyOf must be an array of source arrays")
+    if not all(isinstance(group, list) and group for group in alternatives):
+        raise CheckFailure("expectedAnyOf entries must be non-empty source arrays")
+    missing_groups = [
+        [str(source) for source in group]
+        for group in alternatives
+        if not any(configured(str(source)) for source in group)
+    ]
+    if missing or missing_groups:
+        messages = missing + ["one of (" + " | ".join(group) + ")" for group in missing_groups]
+        raise CheckFailure("missing package source(s): " + ", ".join(messages))
+    return f"{len(expected) + len(alternatives)} expected package source group(s) configured"
+
+
+CHECKERS = {
+    "command": check_command,
+    "run": check_run,
+    "version": check_version,
+    "file": check_file,
+    "same_file": check_same_file,
+    "broken_symlinks": check_broken_symlinks,
+    "json_values": check_json_values,
+    "models": check_models,
+    "file_age": check_file_age,
+    "packages": check_packages,
+}
+
+
+def load_manifest(path: Path) -> tuple[str, list[tuple[dict[str, Any], Path]]]:
+    try:
+        payload = json.loads(path.read_text())
+    except FileNotFoundError as exc:
+        raise SystemExit(f"setup-health: manifest not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"setup-health: invalid manifest JSON at {path}: {exc}") from exc
+    if payload.get("version") != 1 or not isinstance(payload.get("checks"), list):
+        raise SystemExit(f"setup-health: unsupported manifest schema: {path}")
+    if not all(isinstance(check, dict) for check in payload["checks"]):
+        raise SystemExit(f"setup-health: every manifest check must be an object: {path}")
+    return str(payload.get("name") or path.stem), [(check, path.parent) for check in payload["checks"]]
+
+
+def evaluate(check: dict[str, Any], manifest_dir: Path, live: bool, quick: bool) -> Result:
+    check_id = str(check.get("id") or "unnamed")
+    label = str(check.get("label") or check_id)
+    if check.get("live") and not live:
+        return Result(check_id, label, "skip", "requires --live")
+    if quick and check.get("quick") is False:
+        return Result(check_id, label, "skip", "excluded from quick checks")
+    started = time.monotonic()
+    try:
+        check_type = str(check.get("type") or "")
+        checker = CHECKERS.get(check_type)
+        if not checker:
+            raise CheckFailure(f"unsupported check type: {check_type}")
+        message = checker(check, manifest_dir)
+        status = "pass"
+    except (CheckFailure, OSError, ValueError) as exc:
+        status = "warn" if check.get("optional") else "fail"
+        message = str(exc)
+    return Result(check_id, label, status, message, round((time.monotonic() - started) * 1000))
+
+
+def render_text(results: list[Result], names: list[str], summary_only: bool) -> str:
+    counts = {status: sum(result.status == status for result in results) for status in ("pass", "warn", "fail", "skip")}
+    lines: list[str] = []
+    if not summary_only:
+        lines.append("Setup health: " + ", ".join(names))
+        for result in results:
+            marker = {"pass": "PASS", "warn": "WARN", "fail": "FAIL", "skip": "SKIP"}[result.status]
+            lines.append(f"{marker}: {result.label} — {result.message}")
+    else:
+        for result in results:
+            if result.status in {"warn", "fail"}:
+                lines.append(f"{result.status.upper()}: {result.label} — {result.message}")
+    lines.append(
+        "Summary: "
+        + ", ".join(f"{counts[status]} {status}" for status in ("pass", "warn", "fail", "skip"))
+    )
+    return "\n".join(lines)
+
+
+def main() -> int:
+    default_manifest = Path(__file__).resolve().parents[1] / "health-checks.json"
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", action="append", type=Path, help="trusted health-check manifest; repeatable")
+    parser.add_argument("--live", action="store_true", help="include authenticated or network checks")
+    parser.add_argument("--quick", action="store_true", help="skip checks marked as unsuitable for startup")
+    parser.add_argument("--json", action="store_true", help="emit structured JSON")
+    parser.add_argument("--summary", action="store_true", help="show only issues and aggregate counts")
+    args = parser.parse_args()
+
+    manifest_paths = args.manifest or [default_manifest]
+    names: list[str] = []
+    checks: list[tuple[dict[str, Any], Path]] = []
+    for manifest in manifest_paths:
+        name, loaded = load_manifest(manifest.expanduser().resolve())
+        names.append(name)
+        checks.extend(loaded)
+
+    results = [evaluate(check, manifest_dir, args.live, args.quick) for check, manifest_dir in checks]
+    counts = {status: sum(result.status == status for result in results) for status in ("pass", "warn", "fail", "skip")}
+    if args.json:
+        print(json.dumps({"manifests": names, "counts": counts, "results": [asdict(item) for item in results]}, indent=2))
+    else:
+        print(render_text(results, names, args.summary))
+    return 1 if counts["fail"] else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

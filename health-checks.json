@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "name": "claude-to-pi core",
+  "checks": [
+    {"id": "cmd.brew", "type": "command", "label": "Homebrew", "command": "brew"},
+    {"id": "cmd.git", "type": "command", "label": "Git", "command": "git"},
+    {"id": "cmd.gh", "type": "command", "label": "GitHub CLI", "command": "gh"},
+    {"id": "cmd.jq", "type": "command", "label": "jq", "command": "jq"},
+    {"id": "cmd.node", "type": "command", "label": "Node.js", "command": "node"},
+    {"id": "cmd.npm", "type": "command", "label": "npm", "command": "npm"},
+    {"id": "cmd.python", "type": "command", "label": "Python 3", "command": "python3"},
+    {"id": "cmd.uv", "type": "command", "label": "uv", "command": "uv"},
+    {"id": "cmd.pi", "type": "command", "label": "Pi", "command": "pi"},
+    {"id": "cmd.send-gate", "type": "command", "label": "send-gate", "command": "send-gate"},
+    {"id": "cmd.papercut", "type": "command", "label": "papercut", "command": "papercut"},
+    {"id": "cmd.ffmpeg", "type": "command", "label": "ffmpeg", "command": "ffmpeg", "optional": true},
+    {"id": "cmd.yt-dlp", "type": "command", "label": "yt-dlp", "command": "yt-dlp", "optional": true},
+    {"id": "version.pi", "type": "version", "label": "Pi version", "command": ["pi", "--version"]},
+    {"id": "file.settings", "type": "file", "label": "Pi settings", "path": "{agent_dir}/settings.json", "kind": "file"},
+    {"id": "file.guidance", "type": "file", "label": "Pi agent guidance", "path": "{agent_dir}/AGENTS.md", "kind": "file"},
+    {"id": "file.auto-compact", "type": "file", "label": "Auto-compaction policy", "path": "{agent_dir}/auto-compact.json", "kind": "file"},
+    {"id": "config.auto-compact", "type": "json_values", "label": "Auto-compaction threshold", "path": "{agent_dir}/auto-compact.json", "expected": {"defaultThresholdTokens": 200000}},
+    {"id": "config.models", "type": "models", "label": "Current model configuration", "path": "{agent_dir}/settings.json", "expected": ["openai-codex/gpt-5.6-sol", "anthropic/claude-opus-4-8"]},
+    {"id": "permission.messages", "type": "run", "label": "Full Disk Access for Messages", "command": ["python3", "-c", "from pathlib import Path; p=Path.home()/'Library/Messages/chat.db'; p.exists() and p.open('rb').read(1)"], "quick": false},
+    {"id": "runtime.chrome-cookies", "type": "run", "label": "Chrome-cookie self-contained runtime", "command": ["{manifest_dir}/skills/chrome-cookies/extract.py", "--help"], "timeoutSeconds": 60, "quick": false},
+    {"id": "runtime.papercut-resolve", "type": "run", "label": "Papercut path resolution", "command": ["papercut", "resolve", "--json"]},
+    {"id": "runtime.papercut-dry-run", "type": "run", "label": "Papercut safe dry run", "command": ["papercut", "--dry-run", "--", "A safe setup-health verification note."], "quick": false},
+    {"id": "links.extensions", "type": "broken_symlinks", "label": "Extension symlinks", "path": "{agent_dir}/extensions", "allowMissing": true},
+    {"id": "links.skills", "type": "broken_symlinks", "label": "Skill symlinks", "path": "{agent_dir}/skills", "allowMissing": true},
+    {"id": "links.prompts", "type": "broken_symlinks", "label": "Prompt symlinks", "path": "{agent_dir}/prompts", "allowMissing": true},
+    {
+      "id": "packages.runner",
+      "type": "packages",
+      "label": "Shared setup-health package",
+      "settings": "{agent_dir}/settings.json",
+      "expectedSources": ["git:github.com/tmustier/claude-to-pi"]
+    },
+    {
+      "id": "packages.defaults",
+      "type": "packages",
+      "label": "Recommended core Pi packages",
+      "settings": "{agent_dir}/settings.json",
+      "optional": true,
+      "expectedSources": [
+        "npm:pi-subagents",
+        "npm:pi-mcp-adapter",
+        "git:github.com/tmustier/pi-auto-compact@v0.1.2",
+        "git:github.com/vercel-labs/agent-browser",
+        "git:github.com/nicobailon/surf-cli"
+      ],
+      "expectedAnyOf": [["npm:pi-web-access", "git:github.com/nicobailon/pi-web-access"]]
+    }
+  ]
+}

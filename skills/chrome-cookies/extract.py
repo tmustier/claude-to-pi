@@ -1,17 +1,21 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["cryptography>=49.0.0"]
+# ///
 """Extract cookies from Chrome on macOS by decrypting the cookie SQLite DB.
 
 Uses the Chrome Safe Storage key from macOS Keychain to decrypt AES-128-CBC
 encrypted cookies (v10 format, Chrome 80+).
 
-Requirements: cryptography (pip install cryptography)
+Requirements: uv (cryptography is provisioned from the inline script metadata)
 
 Usage:
     # Extract all cookies for a domain
     ./extract.py --domain app.example.com
 
     # Extract specific cookie names
-    ./extract.py --domain app.example.com --names __session__0 __session__1
+    ./extract.py --domain app.example.com --names session_id csrf_token
 
     # Output as JSON (default)
     ./extract.py --domain github.com --json
@@ -28,8 +32,31 @@ Usage:
     # Include subdomains (e.g., .example.com matches app.example.com)
     ./extract.py --domain example.com --include-subdomains
 """
-import sqlite3, subprocess, hashlib, json, sys, argparse
+import argparse
+import hashlib
+import json
+import re
+import sqlite3
+import subprocess
+import sys
 from pathlib import Path
+
+
+DOMAIN_PATTERN = re.compile(r"^[a-z0-9.-]+$")
+
+
+def cookie_domain_filter(domain, include_subdomains=False):
+    """Return an exact SQL host filter and parameters for a cookie domain."""
+    normalized = domain.strip().lower().lstrip(".").rstrip(".")
+    if not normalized or not DOMAIN_PATTERN.fullmatch(normalized) or ".." in normalized:
+        raise ValueError(f"Invalid cookie domain: {domain!r}")
+
+    if include_subdomains:
+        return (
+            "(host_key = ? OR host_key = ? OR host_key LIKE ?)",
+            [normalized, f".{normalized}", f"%.{normalized}"],
+        )
+    return "(host_key = ? OR host_key = ?)", [normalized, f".{normalized}"]
 
 
 def get_chrome_key():
@@ -44,8 +71,8 @@ def get_chrome_key():
     return hashlib.pbkdf2_hmac('sha1', password.encode(), b'saltysalt', 1003, dklen=16)
 
 
-def find_chrome_profile(domain, profile_hint=None):
-    """Find the Chrome profile that has cookies for the given domain."""
+def find_chrome_profile(domain, profile_hint=None, include_subdomains=False):
+    """Find the Chrome profile that has cookies for the exact domain scope."""
     chrome_dir = Path.home() / "Library/Application Support/Google/Chrome"
 
     if profile_hint:
@@ -54,7 +81,9 @@ def find_chrome_profile(domain, profile_hint=None):
             return candidate
         raise FileNotFoundError(f"Chrome profile '{profile_hint}' not found or has no Cookies DB")
 
-    # Auto-detect: check all profiles for cookies matching the domain
+    where, params = cookie_domain_filter(domain, include_subdomains)
+
+    # Auto-detect: check all profiles for cookies matching the domain scope
     profiles = ["Default"] + [f"Profile {i}" for i in range(1, 10)]
     for profile in profiles:
         candidate = chrome_dir / profile / "Cookies"
@@ -63,8 +92,7 @@ def find_chrome_profile(domain, profile_hint=None):
         try:
             conn = sqlite3.connect(f"file:{candidate}?mode=ro", uri=True)
             count = conn.execute(
-                "SELECT COUNT(*) FROM cookies WHERE host_key LIKE ?",
-                (f"%{domain}%",)
+                f"SELECT COUNT(*) FROM cookies WHERE {where}", params
             ).fetchone()[0]
             conn.close()
             if count > 0:
@@ -124,17 +152,11 @@ def extract_cookies(domain, names=None, profile=None, include_subdomains=False):
     Returns:
         dict of {cookie_name: decrypted_value}
     """
+    where, params = cookie_domain_filter(domain, include_subdomains)
     key = get_chrome_key()
-    cookie_db = find_chrome_profile(domain, profile)
+    cookie_db = find_chrome_profile(domain, profile, include_subdomains)
 
     conn = sqlite3.connect(f"file:{cookie_db}?mode=ro", uri=True)
-
-    if include_subdomains:
-        where = "host_key LIKE ?"
-        params = [f"%{domain}%"]
-    else:
-        where = "(host_key = ? OR host_key = ?)"
-        params = [domain, f".{domain}"]
 
     if names:
         placeholders = ",".join("?" * len(names))
@@ -185,7 +207,7 @@ def main():
             profile=args.profile,
             include_subdomains=args.include_subdomains
         )
-    except (RuntimeError, FileNotFoundError) as e:
+    except (RuntimeError, FileNotFoundError, ValueError) as e:
         print(f"❌ {e}", file=sys.stderr)
         sys.exit(1)
 
