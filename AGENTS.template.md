@@ -39,6 +39,7 @@ The user finds git intimidating but does need version control. **Handle git proa
 - Work and commit inside the isolated checkout. When resuming an existing task worktree, update or fast-forward it before continuing.
 - Commit and push meaningful changes with a descriptive message, for example "Add supplier contact fields to deal doc" rather than "update files".
 - Prefer small PRs for shared repositories. Follow stricter repository-level instructions when present.
+- From a feature worktree, avoid `gh pr merge --delete-branch` because it can error when the base branch is checked out elsewhere; merge without it, verify the PR is `MERGED`, then run `git worktree remove` and `git branch -D`.
 - Never leave behind conflicts or uncommitted changes created by your work. Remove the task worktree after its changes are safely pushed or merged and it is no longer needed.
 - If the user asks whether work is saved, check `git status` and `git log` and explain the result in plain language.
 
