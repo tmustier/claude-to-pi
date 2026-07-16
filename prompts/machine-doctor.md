@@ -48,6 +48,8 @@ Goals:
 5. Verify common app installs where relevant:
    - Google Chrome, terminal app, Microsoft Office apps if document workflows matter
    - Optional apps the user cares about: Granola, Ghostty, Notion, Superhuman, Docker, Obsidian, Cursor
+   - cmux is optional, but **if** it is installed (`cmux` on PATH or `/Applications/cmux.app`) and `~/.pi/agent/extensions/cmux-session.ts` is missing, run `cmux hooks pi install --yes` (bundled CLI: `/Applications/cmux.app/Contents/Resources/bin/cmux`). Without these hooks cmux guesses Pi session↔pane bindings from the newest session file per cwd and can duplicate or swap same-cwd Pi tabs when restoring after a crash
+   - If the active checkout has `shell/zshrc.claude-to-pi` but `~/.zshrc` does not source it, offer to append `[ -r ~/claude-to-pi/shell/zshrc.claude-to-pi ] && source ~/claude-to-pi/shell/zshrc.claude-to-pi` (adjust the path if the checkout lives elsewhere, and `brew install zsh-autosuggestions` if missing) — inline shell autosuggestions plus the `yolo` Pi alias
 6. Check auth/login state where safe:
    - `gh auth status`
    - If Claude Code credentials exist, confirm whether Pi has copied Anthropic auth

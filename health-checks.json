@@ -25,6 +25,7 @@
     {"id": "runtime.chrome-cookies", "type": "run", "label": "Chrome-cookie self-contained runtime", "command": ["{manifest_dir}/skills/chrome-cookies/extract.py", "--help"], "timeoutSeconds": 60, "quick": false},
     {"id": "runtime.papercut-resolve", "type": "run", "label": "Papercut path resolution", "command": ["papercut", "resolve", "--json"]},
     {"id": "runtime.papercut-dry-run", "type": "run", "label": "Papercut safe dry run", "command": ["papercut", "--dry-run", "--", "A safe setup-health verification note."], "quick": false},
+    {"id": "runtime.cmux-pi-hooks", "type": "run", "label": "cmux Pi session hooks (only when cmux is installed)", "command": ["/bin/sh", "-c", "if command -v cmux >/dev/null 2>&1 || [ -x /Applications/cmux.app/Contents/Resources/bin/cmux ]; then [ -f \"{agent_dir}/extensions/cmux-session.ts\" ]; else exit 0; fi"], "optional": true},
     {"id": "links.extensions", "type": "broken_symlinks", "label": "Extension symlinks", "path": "{agent_dir}/extensions", "allowMissing": true},
     {"id": "links.skills", "type": "broken_symlinks", "label": "Skill symlinks", "path": "{agent_dir}/skills", "allowMissing": true},
     {"id": "links.prompts", "type": "broken_symlinks", "label": "Prompt symlinks", "path": "{agent_dir}/prompts", "allowMissing": true},
