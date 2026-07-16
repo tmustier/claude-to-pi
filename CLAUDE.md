@@ -238,6 +238,33 @@ command -v yt-dlp >/dev/null 2>&1 || brew install yt-dlp
 
 If the user wants browser automation via `surf-cli`, finish that later from `/onboard`; it requires a Chrome extension and native host setup.
 
+### Shell autocomplete and the `yolo` alias
+
+Optional but handy: zsh-autosuggestions shows inline grey suggestions from history and tab-completion as you type, and the shared shell extras include a `yolo` alias ported from Claude Code to Pi (`pi --approve` — launch Pi trusting project-local config without the trust prompt; Pi has no broader permission gate to skip):
+
+```bash
+brew list zsh-autosuggestions >/dev/null 2>&1 || brew install zsh-autosuggestions
+
+# Source the shared shell extras from ~/.zshrc (kept current by git pull in ~/claude-to-pi)
+grep -Fq 'source ~/claude-to-pi/shell/zshrc.claude-to-pi' ~/.zshrc 2>/dev/null || echo '[ -r ~/claude-to-pi/shell/zshrc.claude-to-pi ] && source ~/claude-to-pi/shell/zshrc.claude-to-pi' >> ~/.zshrc
+```
+
+### cmux users: install Pi session hooks
+
+If the user runs agents inside [cmux](https://cmux.io), install cmux's Pi hook extension. cmux's Claude Code integration is built in, but its Pi integration is opt-in — without it, cmux guesses which Pi session belongs to which pane (newest session file per working directory), which duplicates or swaps same-cwd Pi tabs when sessions are restored after a crash:
+
+```bash
+CMUX_CLI="$(command -v cmux || true)"
+[ -z "$CMUX_CLI" ] && [ -x "/Applications/cmux.app/Contents/Resources/bin/cmux" ] && CMUX_CLI="/Applications/cmux.app/Contents/Resources/bin/cmux"
+if [ -n "$CMUX_CLI" ]; then
+  "$CMUX_CLI" hooks pi install --yes
+else
+  echo "cmux not installed — skipping (only needed if you use cmux)"
+fi
+```
+
+The extension lands at `~/.pi/agent/extensions/cmux-session.ts`. It is owned and upgraded in place by cmux, does nothing outside cmux panes, and can be removed with `cmux hooks pi uninstall`.
+
 ## Step 8: Pull Pi packages
 
 This downloads the packages configured in `settings.json`, including `tmustier/pi-auto-compact@v0.1.2`:

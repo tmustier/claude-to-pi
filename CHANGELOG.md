@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added optional shell extras (`shell/zshrc.claude-to-pi`, sourced from `~/.zshrc`): zsh-autosuggestions with the history + completion strategy, a guarded `compinit`, and the `yolo` alias ported from Claude Code to Pi (`pi --approve`).
+- Added cmux Pi session hook installation (`cmux hooks pi install --yes`) to setup and `/machine-doctor`, plus an optional setup-health check. Without the hooks cmux infers Pi session↔pane bindings from the newest session file per cwd and can duplicate or swap same-cwd Pi tabs when restoring sessions after a crash.
+
 - Added a trusted, manifest-driven `setup-health` runner with command, version, file, package, symlink, safe runtime, quick, live, JSON, and multi-manifest checks; integrated it with onboarding and `/machine-doctor`.
 - Updated the bundled Chrome-cookie helper to a self-contained `uv` runtime with label-boundary domain matching and regression coverage.
 - Added the `papercut` CLI, Pi-aware metadata capture extension, optional deduplicated GitHub inbox submission, explicit `/papercuts-review` prompt, agent safety policy, setup/doctor integration, and tests for sanitized append-only workflow-friction notes.

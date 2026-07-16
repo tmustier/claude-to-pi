@@ -1,0 +1,29 @@
+# claude-to-pi managed zsh extras.
+# Sourced from ~/.zshrc (setup adds a guarded source line; `git pull` in
+# ~/claude-to-pi keeps this file current). Keep secrets and
+# machine-specific paths out of this file.
+
+# Completion system — needed for the "completion" suggestion strategy below.
+# Skipped if something earlier in ~/.zshrc (e.g. oh-my-zsh) already ran compinit.
+if ! typeset -f compdef >/dev/null 2>&1; then
+  autoload -Uz compinit
+  compinit
+fi
+
+# Inline grey autosuggestions as you type, from shell history and
+# tab-completion candidates. Accept with the right arrow key.
+if [ -r /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
+  source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+elif [ -r /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
+  source /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+fi
+if [ -n "${ZSH_AUTOSUGGEST_VERSION:-}" ] || typeset -f _zsh_autosuggest_start >/dev/null 2>&1; then
+  ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+  ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+fi
+
+# If you had a Claude Code yolo alias, this is the Pi equivalent: launch Pi
+# trusting project-local config without the trust prompt. Pi has no broader
+# permission gate to skip, so this is the whole port of
+# `claude --dangerously-skip-permissions`.
+alias yolo='pi --approve'
