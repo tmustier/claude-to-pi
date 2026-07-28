@@ -69,7 +69,7 @@ The template keeps package defaults deliberately small:
 - `pi-mcp-adapter` — MCP support when you decide you need it.
 - `pi-auto-compact` — persisted native compaction after tool-bearing turns cross 200,000 estimated tokens.
 - `pi-web-access` — web search, page fetching, YouTube/video handling.
-- `agent-browser` and `surf-cli` — browser automation options.
+- `surf-cli` — browser automation through the user's existing logged-in Chrome.
 - Anthropic document Agent Skills for `docx`, `pdf`, and `xlsx`.
 - This repo's own Agent Skills from `tmustier/claude-to-pi`.
 

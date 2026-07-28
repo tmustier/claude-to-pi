@@ -181,10 +181,7 @@ Explain: this downloads the packages listed in `settings.json`, including `tmust
 
 ## Step 7: Browser automation
 
-This setup includes two browser options:
-
-- `agent-browser` — strong general browser automation; use it when Pi needs to open pages, click, fill forms, test web apps, or take screenshots.
-- `surf-cli` — controls the user's real Chrome profile via a Chrome extension/native host, useful when logged-in browser state matters.
+This setup includes `surf-cli` for browser automation — it controls the user's real Chrome profile via a Chrome extension/native host, so Pi can open pages, click, fill forms, take screenshots, and work with logged-in browser state.
 
 For `surf-cli`, walk through only if the user wants live-Chrome control now:
 
@@ -210,7 +207,7 @@ For `surf-cli`, walk through only if the user wants live-Chrome control now:
    surf tab.list
    ```
 
-If this is too much for now, skip it. Pi can still use `agent-browser` or normal web-fetch/search tools.
+If this is too much for now, skip it. Pi can still use normal web-fetch/search tools.
 
 ## Step 8: MCP, only when useful
 

@@ -11,7 +11,6 @@
     "npm:pi-mcp-adapter",
     "git:github.com/tmustier/pi-auto-compact@v0.1.2",
     "git:github.com/nicobailon/pi-web-access",
-    "git:github.com/vercel-labs/agent-browser",
     "git:github.com/nicobailon/surf-cli",
     {
       "source": "git:github.com/anthropics/skills",

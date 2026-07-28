@@ -77,7 +77,7 @@ Keep browser and app automation in the background unless the user explicitly ask
 
 The `non-interactive-bash` extension prevents common hangs by injecting environment variables such as `GIT_EDITOR`, `PAGER`, `GIT_TERMINAL_PROMPT`, and `HOMEBREW_NO_AUTO_UPDATE` into bash calls.
 
-- For websites, use `agent-browser` in its default headless mode. Use `--session <name>` when state must persist and close the session when finished. Use `--headed` only when the user needs a visible browser or must complete a manual interaction.
+- For browser UI work, use Surf (`surf-cli`) against the user's existing logged-in Chrome: one unfocused, explicitly targeted window per agent, closed when done. Run `surf --help-full` for current syntax.
 - For supported native app operations, use signed Computer Use tools when available rather than launching app binaries from bash.
 - When the user explicitly asks to open a PDF, file or app for them, use macOS Launch Services (`open <path>` or `open -a "App Name"`).
 - Never run a long-lived GUI app binary directly from bash.
