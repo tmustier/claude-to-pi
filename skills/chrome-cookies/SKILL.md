@@ -61,8 +61,8 @@ uv run "$SKILL_DIR/extract.py" --domain example.com --include-subdomains
 - **v10 format** — handles Chrome's v10 (AES-128-CBC) encryption. If Chrome changes to a new format, the script will need updating.
 - **CBC first-block garbage** — the decryption produces 16-32 bytes of garbage at the start (Chrome's static IV issue). The script heuristically finds the real value start (JWT prefix, skip garbage prefix). This works for all observed cookie formats but could theoretically mismatch on unusual values.
 
-## Why not agent-browser --auto-connect?
+## Why this still exists alongside Surf
 
-Chrome 145+ blocks `--remote-debugging-port` on the default/real profile for security ("requires a non-default data directory"). There is no way to connect agent-browser or any CDP tool to the user's live Chrome session with their cookies. The `--auto-connect` workflow described in agent-browser docs does not work on modern macOS Chrome.
+Prefer Surf when the work can run inside the user's logged-in Chrome. Use this skill only when a non-browser API explicitly needs session cookies and no supported API, MCP or OAuth route exists.
 
-This skill bypasses the browser entirely by reading the cookie database directly.
+Chrome 145+ blocks remote-debugging access to the default profile. This skill instead reads the cookie database directly; never use it merely as a shortcut for browser control.

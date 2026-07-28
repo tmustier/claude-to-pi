@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Retired the `agent-browser` package from default settings, docs, onboarding, health checks, and `/machine-doctor`; `surf-cli` is the supported browser automation path.
+
 - Added optional shell extras (`shell/zshrc.claude-to-pi`, sourced from `~/.zshrc`): zsh-autosuggestions with the history + completion strategy, a guarded `compinit`, and the `yolo` alias ported from Claude Code to Pi (`pi --approve`).
 - Added cmux Pi session hook installation (`cmux hooks pi install --yes`) to setup and `/machine-doctor`, plus an optional setup-health check. Without the hooks cmux infers Pi session↔pane bindings from the newest session file per cwd and can duplicate or swap same-cwd Pi tabs when restoring sessions after a crash.
 

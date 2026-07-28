@@ -35,7 +35,7 @@ Goals:
    - Verify `papercut resolve --json` and a sanitized `papercut --dry-run` succeed; do not append or submit a real note during the audit
 3. Verify Pi package setup:
    - Read `~/.pi/agent/settings.json`
-   - Check that the default package list is small and current: `pi-subagents`, `pi-mcp-adapter`, `tmustier/pi-auto-compact@v0.1.2`, `pi-web-access`, `agent-browser`, `surf-cli`, document skills, and `tmustier/claude-to-pi` skills
+   - Check that the default package list is small and current: `pi-subagents`, `pi-mcp-adapter`, `tmustier/pi-auto-compact@v0.1.2`, `pi-web-access`, `surf-cli`, document skills, and `tmustier/claude-to-pi` skills
    - Confirm `~/.pi/agent/auto-compact.json` is valid and uses 200,000 tokens when the user has no intentional override
    - Flag an active `model-compaction-trigger.ts`, `soft-context-compaction.json`, or another proactive-compaction package as a potential duplicate trigger; preserve a timestamped backup when disabling it
    - If packages/resources look missing or stale, suggest and/or run `pi update --extensions`
@@ -59,7 +59,7 @@ Goals:
    - If access fails, explain that Full Disk Access is likely missing for the current terminal app / Pi
    - If browser automation or screenshots are likely blocked, explain Accessibility and Screen Recording permissions may still need approval
 8. Browser automation:
-   - Check whether `agent-browser` package/resources appear installed
+   - Flag a leftover `agent-browser` package as retired; `surf-cli` is the supported browser automation path
    - Check whether `surf` is installed and whether `surf tab.list` works
    - If `surf` is not configured, give the native-host setup steps, but do not force it
 9. If something is easy and safe to fix with commands, fix it.
